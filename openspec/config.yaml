@@ -1,0 +1,13 @@
+schema: spec-driven
+
+context: |
+  技术栈: Python、torch
+  Domain: fMRI time-series classification and causal graph learning
+
+rules:
+  proposal:
+    - 必须包含回滚方案
+    - 标注影响的模块范围
+    - 该项目以 doc 中的描述为起点，并以此为基础进行开发；doc 中的文档不能修改，要作为初始参考。项目修改后的描述文档请新建。
+  specs:
+    - 使用 Given/When/Then 格式描述测试场景
