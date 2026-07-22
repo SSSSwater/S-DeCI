@@ -113,15 +113,17 @@ class DAGMALogDetConstraint(nn.Module):
         self.power_iters = int(power_iters)
         self.eps = float(eps)
         self.register_buffer("identity", torch.eye(num_nodes))
+        self.register_buffer("last_eigenvector", torch.ones(num_nodes, 1))
         self.last_spectral_radius = None
         self.last_scale = None
         self.last_logdet_sign = None
 
     def estimate_spectral_radius(self, matrix):
-        x = torch.ones((self.num_nodes, 1), device=matrix.device, dtype=matrix.dtype)
+        x = self.last_eigenvector.to(device=matrix.device, dtype=matrix.dtype)
         for _ in range(self.power_iters):
             x = torch.matmul(matrix, x)
             x = x / (torch.norm(x, p=2) + self.eps)
+        self.last_eigenvector.copy_(x.detach().to(device=self.last_eigenvector.device, dtype=self.last_eigenvector.dtype))
         numerator = torch.matmul(torch.matmul(x.T, matrix), x)
         denominator = torch.matmul(x.T, x).clamp_min(self.eps)
         return (numerator / denominator).squeeze()

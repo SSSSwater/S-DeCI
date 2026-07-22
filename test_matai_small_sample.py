@@ -37,7 +37,7 @@ def parse_args():
     parser.add_argument("--use-deci-module1", type=int, default=1, help="是否启用 S-DeCI 模块 1 DeCI/Cycle 分解。")
     parser.add_argument("--use-causal-module2", type=int, default=1)
     parser.add_argument("--causal-feature-source", default="sum", choices=("sum", "last"))
-    parser.add_argument("--causal-graph-method", default="nts_notears", choices=("nts_notears", "dag_sampling"))
+    parser.add_argument("--causal-graph-method", default="nts_notears", choices=("nts_notears", "attn_nts_notears", "dag_sampling"))
     parser.add_argument("--causal-init-logit", type=float, default=-2.0)
     parser.add_argument("--causal-learning-rate", type=float, default=1e-2)
     parser.add_argument("--causal-graph-hidden-dim", type=int, default=0)
@@ -74,9 +74,6 @@ def parse_args():
     parser.add_argument("--hpec-margin", type=float, default=1.0)
     parser.add_argument("--hpec-prototypes-per-class", type=int, default=1)
     parser.add_argument("--hpec-proto-temperature", type=float, default=0.2)
-    parser.add_argument("--lambda-hpec-mle", type=float, default=0.0)
-    parser.add_argument("--lambda-hpec-pcl", type=float, default=0.0)
-    parser.add_argument("--lambda-hpec-pal", type=float, default=0.0)
     parser.add_argument("--hpec-trainable-prototypes", type=int, default=0)
     parser.add_argument("--hpec-init-steps", type=int, default=500)
     parser.add_argument("--hpec-eps", type=float, default=1e-7)
@@ -223,9 +220,6 @@ def build_experiment_args(cli_args):
         hpec_margin=cli_args.hpec_margin,
         hpec_prototypes_per_class=cli_args.hpec_prototypes_per_class,
         hpec_proto_temperature=cli_args.hpec_proto_temperature,
-        lambda_hpec_mle=cli_args.lambda_hpec_mle,
-        lambda_hpec_pcl=cli_args.lambda_hpec_pcl,
-        lambda_hpec_pal=cli_args.lambda_hpec_pal,
         hpec_trainable_prototypes=cli_args.hpec_trainable_prototypes,
         hpec_init_steps=cli_args.hpec_init_steps,
         hpec_eps=cli_args.hpec_eps,
@@ -270,6 +264,10 @@ def build_experiment_args(cli_args):
         print_process=cli_args.print_process,
         print_metric_every=cli_args.print_metric_every,
         print_data_info=cli_args.print_data_info,
+        use_tensorboard=0,
+        tensorboard_dir="outputs/tensorboard",
+        tensorboard_run_name=None,
+        tensorboard_disable_smoke_runs=1,
         use_gpu=use_gpu,
         gpu=cli_args.gpu,
         gpu_idx=[cli_args.gpu],

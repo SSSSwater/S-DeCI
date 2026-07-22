@@ -8,7 +8,7 @@
 
 ### Requirement: 模型概要
 
-DeCI 面向多变量 fMRI 时间序列分类任务。模型先将每个 ROI/channel 的时间维序列独立嵌入到潜在维度，然后堆叠一个或多个 DeCI block。每个 block 从当前残差表征中逐步提取趋势分量和季节性分量；每个分量分别通过独立分类头产生 logits；最终预测由所有趋势分量和季节性分量的 logits 相加得到。 ? Requirement SHALL ??????
+DeCI 面向多变量 fMRI 时间序列分类任务。模型先将每个 ROI/channel 的时间维序列独立嵌入到潜在维度，然后堆叠一个或多个 DeCI block。每个 block 从当前残差表征中逐步提取趋势分量和季节性分量；每个分量分别通过独立分类头产生 logits；最终预测由所有趋势分量和季节性分量的 logits 相加得到。
 
 #### Scenario: 使用 DeCI 进行 fMRI 分类
 
@@ -18,7 +18,7 @@ DeCI 面向多变量 fMRI 时间序列分类任务。模型先将每个 ROI/chan
 
 ### Requirement: 必要模型配置
 
-DeCI 模型应当由 `run_cv.py` 传入的实验参数对象进行配置。 ? Requirement SHALL ??????
+DeCI 模型应当由 `run_cv.py` 传入的实验参数对象进行配置。
 
 #### Scenario: 构造模型
 
@@ -27,7 +27,7 @@ DeCI 模型应当由 `run_cv.py` 传入的实验参数对象进行配置。 ? Re
 
 ### Requirement: 输出维度选择
 
-模型应当在二分类任务中使用一维输出，在多分类任务中使用类别数维输出。 ? Requirement SHALL ??????
+模型应当在二分类任务中使用一维输出，在多分类任务中使用类别数维输出。
 
 #### Scenario: 构造二分类模型
 
@@ -43,7 +43,7 @@ DeCI 模型应当由 `run_cv.py` 传入的实验参数对象进行配置。 ? Re
 
 ### Requirement: 输入张量契约
 
-DeCI 模型应当接收形状为 `[B, T, N]` 的 fMRI 样本张量。 ? Requirement SHALL ??????
+DeCI 模型应当接收形状为 `[B, T, N]` 的 fMRI 样本张量。
 
 #### Scenario: forward 开始执行
 
@@ -52,7 +52,7 @@ DeCI 模型应当接收形状为 `[B, T, N]` 的 fMRI 样本张量。 ? Requirem
 
 ### Requirement: 可选时间维归一化
 
-模型应当在嵌入前可选地沿时间维对每个样本进行归一化。 ? Requirement SHALL ??????
+模型应当在嵌入前可选地沿时间维对每个样本进行归一化。
 
 #### Scenario: 启用归一化
 
@@ -67,7 +67,7 @@ DeCI 模型应当接收形状为 `[B, T, N]` 的 fMRI 样本张量。 ? Requirem
 
 ### Requirement: Channel-Independent 变量嵌入
 
-模型应当将每个 ROI/channel 的时间序列独立嵌入到 `d_model` 维。 ? Requirement SHALL ??????
+模型应当将每个 ROI/channel 的时间序列独立嵌入到 `d_model` 维。
 
 #### Scenario: 执行嵌入
 
@@ -78,7 +78,7 @@ DeCI 模型应当接收形状为 `[B, T, N]` 的 fMRI 样本张量。 ? Requirem
 
 ### Requirement: 渐进式 DeCI Block 堆叠
 
-模型应当将 `configs.layer` 个 DeCI block 依次作用于残差表征。 ? Requirement SHALL ??????
+模型应当将 `configs.layer` 个 DeCI block 依次作用于残差表征。
 
 #### Scenario: 执行 block 堆叠
 
@@ -89,7 +89,7 @@ DeCI 模型应当接收形状为 `[B, T, N]` 的 fMRI 样本张量。 ? Requirem
 
 ### Requirement: Logit 级融合
 
-模型应当通过相加所有趋势 logits 与所有季节性 logits 来融合分量预测。 ? Requirement SHALL ??????
+模型应当通过相加所有趋势 logits 与所有季节性 logits 来融合分量预测。
 
 #### Scenario: 生成最终预测
 
@@ -100,7 +100,7 @@ DeCI 模型应当接收形状为 `[B, T, N]` 的 fMRI 样本张量。 ? Requirem
 
 ### Requirement: Block 输入契约
 
-`DeCI_Block` 应当处理形状为 `[B, N, D]` 的嵌入残差张量。 ? Requirement SHALL ??????
+`DeCI_Block` 应当处理形状为 `[B, N, D]` 的嵌入残差张量。
 
 #### Scenario: Block 接收输入
 
@@ -109,7 +109,7 @@ DeCI 模型应当接收形状为 `[B, T, N]` 的 fMRI 样本张量。 ? Requirem
 
 ### Requirement: 趋势分量提取
 
-每个 DeCI block 应当使用 `Trend_ext` 从当前残差表征中提取趋势分量。 ? Requirement SHALL ??????
+每个 DeCI block 应当使用 `Trend_ext` 从当前残差表征中提取趋势分量。
 
 #### Scenario: 提取趋势分量
 
@@ -119,7 +119,7 @@ DeCI 模型应当接收形状为 `[B, T, N]` 的 fMRI 样本张量。 ? Requirem
 
 ### Requirement: 季节性分量提取
 
-每个 DeCI block 应当使用 `Seasonal_ext` 从去除趋势后的残差中提取季节性分量。 ? Requirement SHALL ??????
+每个 DeCI block 应当使用 `Seasonal_ext` 从去除趋势后的残差中提取季节性分量。
 
 #### Scenario: 提取季节性分量
 
@@ -129,7 +129,7 @@ DeCI 模型应当接收形状为 `[B, T, N]` 的 fMRI 样本张量。 ? Requirem
 
 ### Requirement: 分量分类
 
-每个 DeCI block 应当分别对趋势分量和季节性分量进行分类。 ? Requirement SHALL ??????
+每个 DeCI block 应当分别对趋势分量和季节性分量进行分类。
 
 #### Scenario: 生成分量 logits
 
@@ -141,7 +141,7 @@ DeCI 模型应当接收形状为 `[B, T, N]` 的 fMRI 样本张量。 ? Requirem
 
 ### Requirement: Depthwise 趋势卷积
 
-`Trend_ext` 应当使用沿潜在维度的一维逐通道卷积估计平滑趋势分量。 ? Requirement SHALL ??????
+`Trend_ext` 应当使用沿潜在维度的一维逐通道卷积估计平滑趋势分量。
 
 #### Scenario: 初始化趋势提取器
 
@@ -152,7 +152,7 @@ DeCI 模型应当接收形状为 `[B, T, N]` 的 fMRI 样本张量。 ? Requirem
 
 ### Requirement: 趋势提取器保持形状
 
-`Trend_ext` 应当保持输入张量的 `[B, N, D]` 形状。 ? Requirement SHALL ??????
+`Trend_ext` 应当保持输入张量的 `[B, N, D]` 形状。
 
 #### Scenario: 执行趋势提取器 forward
 
@@ -163,7 +163,7 @@ DeCI 模型应当接收形状为 `[B, T, N]` 的 fMRI 样本张量。 ? Requirem
 
 ### Requirement: 门控季节性变换
 
-`Seasonal_ext` 应当使用可学习 gate 与残差 MLP 来估计残差表征中的季节性分量。 ? Requirement SHALL ??????
+`Seasonal_ext` 应当使用可学习 gate 与残差 MLP 来估计残差表征中的季节性分量。
 
 #### Scenario: 执行季节性提取器 forward
 
@@ -176,7 +176,7 @@ DeCI 模型应当接收形状为 `[B, T, N]` 的 fMRI 样本张量。 ? Requirem
 
 ### Requirement: 季节性残差 MLP
 
-`Seasonal_ext` 应当使用残差前馈块进一步细化门控表征。 ? Requirement SHALL ??????
+`Seasonal_ext` 应当使用残差前馈块进一步细化门控表征。
 
 #### Scenario: 执行季节性 MLP
 
@@ -188,7 +188,7 @@ DeCI 模型应当接收形状为 `[B, T, N]` 的 fMRI 样本张量。 ? Requirem
 
 ### Requirement: 二分类兼容性
 
-DeCI 模型应当兼容 `Exp_Main` 中的二分类训练与验证路径。 ? Requirement SHALL ??????
+DeCI 模型应当兼容 `Exp_Main` 中的二分类训练与验证路径。
 
 #### Scenario: 执行二分类验证
 
@@ -198,7 +198,7 @@ DeCI 模型应当兼容 `Exp_Main` 中的二分类训练与验证路径。 ? Req
 
 ### Requirement: 多分类兼容性
 
-DeCI 模型应当兼容 `Exp_Main` 中的多分类训练与验证路径。 ? Requirement SHALL ??????
+DeCI 模型应当兼容 `Exp_Main` 中的多分类训练与验证路径。
 
 #### Scenario: 执行多分类验证
 
@@ -208,7 +208,7 @@ DeCI 模型应当兼容 `Exp_Main` 中的多分类训练与验证路径。 ? Req
 
 ### Requirement: DeCI 不依赖基线模型
 
-DeCI 实现应当只依赖 PyTorch 与 DeCI layer 模块。 ? Requirement SHALL ??????
+DeCI 实现应当只依赖 PyTorch 与 DeCI layer 模块。
 
 #### Scenario: 检查 DeCI import
 
@@ -218,7 +218,7 @@ DeCI 实现应当只依赖 PyTorch 与 DeCI layer 模块。 ? Requirement SHALL 
 
 ### Requirement: 基线保持可比较但与 DeCI 分离
 
-对照模型应当仍可通过 `Exp_Basic.model_dict` 使用，但不应被视为 DeCI 子模块。 ? Requirement SHALL ??????
+对照模型应当仍可通过 `Exp_Basic.model_dict` 使用，但不应被视为 DeCI 子模块。
 
 #### Scenario: 按名称选择模型
 
