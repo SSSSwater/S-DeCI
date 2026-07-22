@@ -131,19 +131,21 @@ def _fit_site_zscore_stats(dataset, train_idx, min_samples_per_site=2):
     if not all_signals:
         return {}, None
 
-    global_stack = torch.stack(all_signals)
-    global_mean = global_stack.mean(dim=(0, 1), keepdim=True)
-    global_std = global_stack.std(dim=(0, 1), unbiased=False, keepdim=True).clamp_min(1e-6)
-    global_stats = (global_mean.squeeze(0), global_std.squeeze(0))
+    # 不同数据集/被试的时间长度可能不同；站点校正只需要每个 ROI
+    # 在训练 fold 内的总体均值和方差，因此沿时间维拼接比 stack 更稳。
+    global_cat = torch.cat(all_signals, dim=0)
+    global_mean = global_cat.mean(dim=0, keepdim=True)
+    global_std = global_cat.std(dim=0, unbiased=False, keepdim=True).clamp_min(1e-6)
+    global_stats = (global_mean, global_std)
 
     site_stats = {}
     for site_id, signals in grouped.items():
         if len(signals) < int(min_samples_per_site):
             continue
-        stack = torch.stack(signals)
-        mean = stack.mean(dim=(0, 1), keepdim=True)
-        std = stack.std(dim=(0, 1), unbiased=False, keepdim=True).clamp_min(1e-6)
-        site_stats[site_id] = (mean.squeeze(0), std.squeeze(0))
+        cat = torch.cat(signals, dim=0)
+        mean = cat.mean(dim=0, keepdim=True)
+        std = cat.std(dim=0, unbiased=False, keepdim=True).clamp_min(1e-6)
+        site_stats[site_id] = (mean, std)
     return site_stats, global_stats
 
 
@@ -187,11 +189,12 @@ def data_provider(args):
         getattr(args, "use_sample_correlation_when_module2_disabled", 1)
     )
     module2_correlation_blend = float(getattr(args, "module2_sample_correlation_blend", 0.0) or 0.0)
+    fc_readout_branch_enabled = bool(getattr(args, "use_fc_readout_branch", 0))
     use_sample_correlation = (
         module2_disabled and graph_path_needs_adjacency and correlation_fallback_enabled
     ) or (
         (not module2_disabled) and graph_path_needs_adjacency and module2_correlation_blend > 0.0
-    )
+    ) or fc_readout_branch_enabled
     dataset = Data(
         args.data_path,
         args.data_type,

@@ -46,8 +46,22 @@ python test_training_smoke.py --use-causal-module2 0 --use-hgcn-module3 1 --use-
 
 ## 行为差异
 
-- 模块 2 开启时：模块 3 使用 `A_learned`，并保留 reconstruction、DAG、L1 auxiliary loss。
-- 模块 2 关闭时：模块 3 使用样本 correlation matrix，不计算模块 2 auxiliary loss。
+- 模块 2 开启时：模块 3 使用 Temporal NTS-NOTEARS 学到的分类图 `A_cls`。模块 2 的训练目标为：
+
+$$
+\mathcal{L}_{\mathrm{module2}}
+=
+\lambda_{\mathrm{pred}}\mathcal{L}_{\mathrm{pred}}
++
+\lambda_{\mathrm{sparse}}\mathcal{L}_{\mathrm{sparse}}
++
+\lambda_{\mathrm{smooth}}\mathcal{L}_{\mathrm{smooth}}
++
+\lambda_{\mathrm{dag}}h(A_0).
+$$
+
+其中 $\mathcal{L}_{\mathrm{pred}}$ 来源于 Granger causality / Temporal NTS-NOTEARS 的“历史时间窗预测未来时间点”原则，$\mathcal{L}_{\mathrm{sparse}}$ 控制脑区间因果边数量，$\mathcal{L}_{\mathrm{smooth}}$ 约束相邻 lag 的图不要剧烈跳变，$h(A_0)$ 只约束同时间残余图的 DAG 性质。
+- 模块 2 关闭时：模块 3 使用样本 correlation matrix，不计算 $\mathcal{L}_{\mathrm{pred}}$、$\mathcal{L}_{\mathrm{sparse}}$、$\mathcal{L}_{\mathrm{smooth}}$ 和 $h(A_0)$。这样做的目的是保留一个“无因果学习”的图分类对照，用来判断模块 2 是否真正带来收益。
 - 测试集 label 仍只用于 loss、metric 和可视化标注，不会输入模型。
 
 ## 可视化

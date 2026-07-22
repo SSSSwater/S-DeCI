@@ -59,6 +59,8 @@ def normalize_s_deci_module_args(args):
     if args.use_hpec_module4 and not args.use_hgcn_module3:
         raise ValueError("--use_hpec_module4 1 requires --use_hgcn_module3 1")
     args.use_hyperbolic_modules34 = int(bool(args.use_hgcn_module3 or args.use_hpec_module4))
+    if not args.use_hpec_module4:
+        args.hpec_prototype_update_mode = "none"
     args.use_sample_correlation_when_module2_disabled = int(
         bool(args.use_sample_correlation_when_module2_disabled)
     )
@@ -85,21 +87,34 @@ def normalize_s_deci_module_args(args):
         "causal_analytic_margin": 0.1,
         "causal_analytic_power_iters": 5,
         "temporal_sem_input_norm": "time_zscore",
-        "temporal_sample_graph_delta_scale": 0.02,
+        "temporal_sample_graph_delta_scale": 0.15,
         "temporal_sample_graph_rank": 4,
         "lambda_temporal_pred": 1.0,
         "lambda_temporal_sparse": 0.0005,
         "lambda_temporal_smooth": 0.0001,
-        "lambda_temporal_counterfactual": 0.0,
-        "temporal_counterfactual_edges": 4,
-        "temporal_counterfactual_temperature": 0.1,
-        "temporal_counterfactual_interval": 1,
-        "temporal_counterfactual_baseline": "zero",
+        "lambda_temporal_group_sparse": 0.0,
+        "lambda_temporal_lag_hierarchy": 0.0,
+        "temporal_prediction_loss_mode": "bold_alff",
+        "temporal_pred_huber_delta": 1.0,
+        "lambda_temporal_pred_delta": 0.2,
+        "lambda_temporal_pred_lowfreq": 0.2,
+        "lambda_temporal_pred_corr": 0.05,
+        "temporal_lowfreq_kernel_size": 9,
+        "temporal_a0_sparse_ratio": 0.2,
+        "temporal_a0_scale": 0.03,
+        "temporal_prediction_target_mode": "innovation",
+        "temporal_candidate_parent_topk": 4,
+        "temporal_decoder_activation": "identity",
         "temporal_dagma_warmup_epochs": 5,
         "temporal_dagma_barrier_epochs": 20,
         "temporal_reg_warmup_epochs": 0,
-        "lambda_hgcn_cls_aux": 0.0,
-        "lambda_hpec_ce_aux": 0.0,
+        "temporal_attention_heads": 2,
+        "temporal_attention_head_dim": 8,
+        "temporal_attention_dropout": 0.0,
+        "temporal_attention_graph_scale": 1.0,
+        "classification_graph_source": "causal_soft_masked_fc",
+        "module2_graph_residual_alpha": 0.10,
+        "detach_module2_graph_for_classification": 0,
     }
     module1_defaults = {
         "module1_random_crop": 0,
@@ -114,19 +129,44 @@ def normalize_s_deci_module_args(args):
         "module1_temporal_stats_weight": 0.0,
     }
     module3_defaults = {
-        "lambda_hgcn_radius_reg": 0.0,
-        "hgcn_radius_target": 0.95,
         "hgcn_residual_alpha": 0.35,
+        "hgcn_einstein_readout_weight": 0.0,
+        "use_causal_role_readout": 0,
+        "causal_role_temperature": 1.0,
+        "hgcn_fc_inject_weight": 0.0,
+        "hgcn_fc_anchor_norm_target": 0.5,
+        "hgcn_fc_anchor_gate_init": -1.5,
+        "lorentz_layers": 1,
+        "lorentz_curvature": 1.0,
+        "lorentz_dropout": 0.0,
+        "lorentz_alpha_out_init": 0.5,
+        "lorentz_max_tangent_norm": 1.0,
+        "lp_use_network_readout": 1,
+        "lp_network_readout_blend": 0.75,
+        "lp_mac_clip_mode": "soft",
+        "module34_geo_dtype": "auto",
+        "mac_min_radius": 0.05,
+        "mac_max_radius": 0.98,
+        "hbr_safe_radius": 2.0,
+        "hbr_loss_weight": 0.0,
+        "keep_gcn_fallback_with_hyperbolic": 0,
+        "hyperbolic_logit_residual_weight": 0.0,
+        "hpec_teacher_distill_weight": 0.0,
+        "hpec_teacher_distill_temperature": 2.0,
+        "hpec_teacher_detach": 1,
+        "hpec_z_radius_loss_weight": 0.0,
+        "hpec_ema_start_epoch": 0,
+        "hpec_prototype_lr_scale": 1.0,
+        "hpec_z_radius_target": 0.3,
+        "hpec_prototype_separation_loss_weight": 0.0,
+        "hpec_prototype_separation_max_cos": 0.35,
+        "hpec_prototype_ce_loss_weight": 0.05,
+        "hpec_energy_ce_margin": 0.0,
+        "hpec_causal_role_energy_weight": 0.0,
+        "hpec_evidence_weight": 1.25,
+        "hpec_avoid_busemann_double_count": 0,
     }
-    module4_defaults = {
-        "lambda_hpec_radius_reg": 0.0,
-        "lambda_hpec_diversity": 0.0,
-        "lambda_hpec_hsic": 0.0,
-        "lambda_hpec_intra_orthogonal": 0.0,
-        "lambda_hpec_inter_margin": 0.0,
-        "hpec_prototype_radius_reg_target": 0.3,
-    }
-    for name, value in {**module1_defaults, **module2_defaults, **module3_defaults, **module4_defaults}.items():
+    for name, value in {**module1_defaults, **module2_defaults, **module3_defaults}.items():
         if not hasattr(args, name):
             setattr(args, name, value)
     return args
@@ -237,23 +277,44 @@ if __name__ == '__main__':
     parser.add_argument('--causal_feature_source', type=str, default='sum',
                         choices=['sum', 'last'], help='S-DeCI 中模块 2 使用的 Cycle feature 来源：sum 表示多层求和，last 表示最后一层')
     parser.add_argument('--causal_graph_method', type=str, default='nts_notears',
-                        choices=['nts_notears', 'dagma_logdet', 'dag_sampling'], help='S-DeCI 模块 2 因果图学习结构：NTS-NOTEARS、DAGMA log-det 或 Differentiable-DAG-Sampling')
+                        choices=['nts_notears', 'attn_nts_notears', 'dagma_logdet', 'dag_sampling'], help='S-DeCI 模块 2 因果图学习结构：nts_notears 为时间序列 NTS-NOTEARS，attn_nts_notears 为 Attention-guided Temporal NTS-NOTEARS；静态 DAGMA / DAG-Sampling 仅作 legacy 对照')
     parser.add_argument('--causal_learning_target', type=str, default='temporal_sem',
                         choices=['static_feature', 'temporal_sem'], help='模块 2 学习目标：static_feature 使用节点特征重构，temporal_sem 使用时间序列预测式 SEM')
-    parser.add_argument('--temporal_lag_order', type=int, default=3,
+    parser.add_argument('--temporal_lag_order', type=int, default=5,
                         help='temporal_sem 模式使用的历史时间滞后阶数')
     parser.add_argument('--temporal_reg_warmup_epochs', type=int, default=0,
                         help='temporal SEM 中 DAG、稀疏、平滑和样本图正则的 warmup epoch 数；0 表示不调度')
-    parser.add_argument('--lambda_temporal_counterfactual', type=float, default=0.0,
-                        help='temporal SEM counterfactual Granger alignment loss weight')
-    parser.add_argument('--temporal_counterfactual_edges', type=int, default=4,
-                        help='number of strongest lagged edges to intervene on per batch')
-    parser.add_argument('--temporal_counterfactual_temperature', type=float, default=0.1,
-                        help='temperature for ranking counterfactual Granger effects')
-    parser.add_argument('--temporal_counterfactual_interval', type=int, default=1,
-                        help='run counterfactual Granger loss every N epochs')
-    parser.add_argument('--temporal_counterfactual_baseline', type=str, default='zero',
-                        choices=['zero', 'shuffle'], help='intervention baseline for lagged parent signal')
+    parser.add_argument('--temporal_decoder_activation', type=str, default='identity',
+                        choices=['tanh', 'sigmoid', 'gelu', 'identity'],
+                        help='temporal NTS-NOTEARS decoder 的隐藏激活函数')
+    parser.add_argument('--temporal_prediction_loss_mode', type=str, default='bold_alff',
+                        choices=['mse', 'huber', 'bold_alff'],
+                        help='Module2 temporal prediction loss mode: mse/huber/bold_alff')
+    parser.add_argument('--temporal_pred_huber_delta', type=float, default=1.0,
+                        help='Module2 Huber delta for robust BOLD prediction loss')
+    parser.add_argument('--lambda_temporal_pred_delta', type=float, default=0.2,
+                        help='Module2 first-order temporal-delta prediction loss weight')
+    parser.add_argument('--lambda_temporal_pred_lowfreq', type=float, default=0.2,
+                        help='Module2 low-frequency trend prediction loss weight for ALFF/fALFF')
+    parser.add_argument('--lambda_temporal_pred_corr', type=float, default=0.05,
+                        help='Module2 temporal waveform correlation loss weight')
+    parser.add_argument('--temporal_lowfreq_kernel_size', type=int, default=9,
+                        help='Module2 low-frequency moving-average kernel size')
+    parser.add_argument('--temporal_a0_sparse_ratio', type=float, default=0.2,
+                        help='Module2 A0 contemporaneous residual graph sparsity ratio')
+    parser.add_argument('--temporal_a0_scale', type=float, default=0.03,
+                        help='Module2 A0 contemporaneous correction scale')
+    parser.add_argument('--temporal_prediction_target_mode', type=str, default='innovation',
+                        choices=['innovation', 'next_value'],
+                        help='Module2 predicts BOLD innovation or the next value directly')
+    parser.add_argument('--temporal_attention_heads', type=int, default=2,
+                        help='Attention-guided Temporal NTS-NOTEARS 使用的 attention head 数')
+    parser.add_argument('--temporal_attention_head_dim', type=int, default=8,
+                        help='Attention-guided Temporal NTS-NOTEARS 每个 head 的隐藏维度')
+    parser.add_argument('--temporal_attention_dropout', type=float, default=0.0,
+                        help='Attention-guided Temporal NTS-NOTEARS 中 attention 权重的 dropout 比例')
+    parser.add_argument('--temporal_attention_graph_scale', type=float, default=1.0,
+                        help='Attention-guided Temporal NTS-NOTEARS 传给模块3分类图的尺度系数；1 表示使用原始聚合图')
     parser.add_argument('--causal_input_norm', type=str, default='none',
                         choices=['none', 'feature_zscore', 'batch_node_zscore'],
                         help='S-DeCI 模块 2 输入特征归一化方式；none 保持旧行为')
@@ -275,6 +336,13 @@ if __name__ == '__main__':
                         help='模块 3 训练期因果图边 dropout 比例')
     parser.add_argument('--use_sample_graph_residual', type=int, default=0,
                         help='是否启用样本级残差图 A_delta；0 表示仅使用共享因果图 A_shared')
+    parser.add_argument('--module2_graph_residual_alpha', type=float, default=0.10,
+                        help='classification_graph_source=residual_blend 时，模块 2 因果图作为 FC 方向残差的强度')
+    parser.add_argument('--classification_graph_source', type=str, default='causal_soft_masked_fc',
+                        choices=['blend', 'learned', 'causal', 'sample_correlation', 'fc', 'residual_blend', 'topk_blend', 'gated_fc', 'causal_masked_fc', 'causal_soft_masked_fc', 'gated_fc_centered', 'gated_fc_signed'],
+                        help='分类用图来源：causal_soft_masked_fc 表示因果候选边保留 FC 权重、非候选边只保留少量 FC 背景')
+    parser.add_argument('--detach_module2_graph_for_classification', type=int, default=0,
+                        help='是否阻断分类 loss 回传到模块 2 图参数；1 表示模块 2 图仅由时序因果损失学习')
     parser.add_argument('--use_hyperbolic_modules34', type=int, default=0,
                         help='是否联合启用 S-DeCI 模块 3 HGCN 与模块 4 HPEC；0 表示使用普通 GCN fallback 分类路径')
 
@@ -292,17 +360,32 @@ if __name__ == '__main__':
                         help='S-DeCI 模块 3 Backclip 限幅半径')
     parser.add_argument('--hgcn_dropout', type=float, default=0.0,
                         help='S-DeCI 模块 3 HGCN 切空间特征 dropout 比例')
+    parser.add_argument('--use_multi_hop_causal_encoding', type=int, default=0,
+                        help='是否在模块3输入加入模块2有向因果图的多阶可达性编码')
+    parser.add_argument('--causal_reachability_hops', type=int, default=2,
+                        help='多阶因果可达性最大 hop 数，建议 1-3')
+    parser.add_argument('--causal_reachability_scale', type=float, default=0.25,
+                        help='多阶因果编码以残差注入模块3输入的强度')
     parser.add_argument('--hgcn_residual_alpha', type=float, default=0.35,
                         help='S-DeCI 模块 3 HGCN 输出与输入双曲特征的 residual 混合比例')
-    parser.add_argument('--lambda_hgcn_radius_reg', type=float, default=0.0,
-                        help='S-DeCI 模块 3 z_global 半径正则权重')
-    parser.add_argument('--hgcn_radius_target', type=float, default=0.95,
-                        help='S-DeCI 模块 3 z_global 半径目标值')
-    parser.add_argument('--lambda_hgcn_cls_aux', type=float, default=0.0,
-                        help='模块 3 切空间分类头辅助 loss 权重')
+    parser.add_argument('--hgcn_fc_inject_weight', type=float, default=0.0,
+                        help='模块 3 将 FC readout embedding 注入双曲切空间的权重；0 表示关闭该注入路径')
+    parser.add_argument('--hgcn_fc_anchor_norm_target', type=float, default=0.5,
+                        help='FC anchor 注入切空间前的目标范数；控制 FC 证据进入双曲表示的幅度')
+    parser.add_argument('--hgcn_fc_anchor_gate_init', type=float, default=-1.5,
+                        help='FC anchor 门控的初始 logit，越小表示训练初期越保守')
+    parser.add_argument('--keep_gcn_fallback_with_hyperbolic', type=int, default=0,
+                        help='启用模块 3/4 时是否保留 GCN fallback logits 作为主分类输出')
+    parser.add_argument('--hyperbolic_logit_residual_weight', type=float, default=0.0,
+                        help='双曲原型 evidence 进入最终 logit 融合的权重；参数名沿用 residual，语义是双视角证据融合')
+    parser.add_argument('--hyperbolic_residual_fusion_mode', type=str, default='residual',
+                        choices=['residual', 'logit_blend', 'binary_margin', 'dual_consensus', 'dual_margin_consensus'],
+                        help='模块3/4与GCN fallback的logit融合方式；dual_margin_consensus只融合正负类margin方向证据')
     parser.add_argument('--class_loss_weighting', type=str, default='none',
-                        choices=['none', 'batch_balanced', 'sqrt_batch_balanced'],
+                        choices=['none', 'batch_balanced', 'sqrt_batch_balanced', 'logit_adjusted', 'sqrt_logit_adjusted'],
                         help='分类交叉熵的类别均衡方式；MDD 等类别不均衡数据可尝试 sqrt_batch_balanced')
+    parser.add_argument('--class_logit_adjust_tau', type=float, default=1.0,
+                        help='logit_adjusted 类别先验校正强度')
     parser.add_argument('--fc_residual_weight', type=float, default=0.0,
                         help='模块 3 图级中心点融合样本 FC 节点强度残差的权重')
     parser.add_argument('--hpec_hgcn_logit_blend', type=float, default=0.1,
@@ -317,6 +400,23 @@ if __name__ == '__main__':
                         help='当 S-DeCI 关闭模块 2 但启用模块 3 时，是否加载每个样本对应的相关系数矩阵作为 HGCN adjacency')
     parser.add_argument('--sample_correlation_mode', type=str, default='abs',
                         choices=['abs', 'positive', 'raw'], help='样本相关矩阵作为图结构时的负值处理方式：abs 取绝对值，positive 仅保留正相关，raw 保留原值')
+    parser.add_argument('--lorentz_layers', type=int, default=1,
+                        help='LP-Brain-HPEC 中 Directed Lorentz GCN 的层数')
+    parser.add_argument('--lorentz_curvature', type=float, default=1.0,
+                        help='LP-Brain-HPEC Lorentz/Poincare 使用的曲率参数')
+    parser.add_argument('--lorentz_dropout', type=float, default=0.0,
+                        help='LP-Brain-HPEC Lorentz 切空间更新中的 dropout 比例')
+    parser.add_argument('--lorentz_alpha_out_init', type=float, default=0.5,
+                        help='LP-Brain-HPEC 出边聚合初始权重，0.5 表示入边和出边起步近似均衡')
+    parser.add_argument('--lorentz_max_tangent_norm', type=float, default=1.0,
+                        help='LP-Brain-HPEC Lorentz tangent 向量最大范数，用于防止流形越界')
+    parser.add_argument('--module34_geo_dtype', type=str, default='auto',
+                        choices=['auto', 'float32', 'float64'],
+                        help='模块 3/4 几何计算精度；auto 保持训练速度，float64 更稳但更慢')
+    parser.add_argument('--use_causal_role_readout', type=int, default=0,
+                        help='是否按有向图读取global/source/sink/hub四个双曲中心')
+    parser.add_argument('--causal_role_temperature', type=float, default=1.0,
+                        help='因果角色ROI权重的softmax温度')
 
     # ==================== S-DeCI 模块 4 HPEC ====================
     parser = root_parser.add_argument_group('==================== S-DeCI 模块 4 HPEC ====================')
@@ -326,64 +426,107 @@ if __name__ == '__main__':
                         help='HPEC 类别 prototype 在 Poincare Ball 中的初始化半径')
     parser.add_argument('--hpec_cone_k', type=float, default=0.1,
                         help='HPEC cone aperture/psi 的 K 参数')
-    parser.add_argument('--hpec_margin', type=float, default=1.0,
+    parser.add_argument('--hpec_margin', type=float, default=0.5,
                         help='HPEC energy loss 中非真实类别的 margin')
     parser.add_argument('--hpec_prototypes_per_class', type=int, default=2,
                         help='HPEC 每个类别使用的 prototype 数量；1 表示单 prototype 回退路径')
-    parser.add_argument('--hpec_proto_temperature', type=float, default=0.2,
+    parser.add_argument('--hpec_proto_temperature', type=float, default=0.6,
                         help='HPEC 多 prototype 相似度和 soft-min 聚合使用的温度')
-    parser.add_argument('--hpec_distance_weight', type=float, default=0.2,
+    parser.add_argument('--hpec_distance_weight', type=float, default=0.5,
                         help='HPEC energy 中 Poincare distance 项的权重；0 表示仅使用 cone violation')
     parser.add_argument('--hpec_energy_scale', type=float, default=1.0,
                         help='HPEC energy 矩阵缩放系数')
-    parser.add_argument('--hpec_energy_mode', type=str, default='cone',
+    parser.add_argument('--hpec_energy_mode', type=str, default='busemann',
                         choices=['cone', 'busemann'],
                         help='模块 4 energy 模式：cone 使用 HPEC cone violation；busemann 使用 ideal prototype 的 Busemann score')
-    parser.add_argument('--hpec_loss_mode', type=str, default='margin',
+    parser.add_argument('--hpec_loss_mode', type=str, default='energy_ce',
                         choices=['margin', 'energy_ce'],
                         help='模块 4 主损失：margin 使用 HPEC margin loss，energy_ce 使用负能量交叉熵')
-    parser.add_argument('--hpec_busemann_temperature', type=float, default=1.0,
+    parser.add_argument('--hpec_evidence_weight', type=float, default=1.25,
+                        help='HPEC energy logits 中叠加 prototype similarity 证据的权重；MDD 5fold/50epoch 当前 1.25 最好')
+    parser.add_argument('--hpec_prototype_ce_loss_weight', type=float, default=0.05,
+                        help='模块 4 多原型相似度 CE 辅助损失权重；MDD 5fold/50epoch 当前默认 0.05')
+    parser.add_argument('--hpec_energy_ce_margin', type=float, default=0.0,
+                        help='真实类别HPEC energy CE的附加间隔；0关闭')
+    parser.add_argument('--hpec_causal_role_energy_weight', type=float, default=0.0,
+                        help='因果角色HPEC能量相对全局能量的融合比例')
+    parser.add_argument('--hpec_avoid_busemann_double_count', type=int, default=0,
+                        help='Busemann 模式下避免 energy logits 与 prototype similarity 使用同一证据重复叠加；MDD 默认保留叠加')
+    parser.add_argument('--hpec_residual_calibration', type=str, default='batch_margin',
+                        choices=['none', 'batch_margin', 'tanh_margin', 'running_batch_margin', 'hybrid_batch_running_margin', 'train_class_margin'],
+                        help='模块4双曲证据进入最终融合前的无标签margin校准方式')
+    parser.add_argument('--hpec_residual_calibration_scale', type=float, default=0.5,
+                        help='模块4margin校准后的尺度')
+    parser.add_argument('--hpec_residual_calibration_momentum', type=float, default=0.05,
+                        help='running/hybrid校准的训练期EMA动量')
+    parser.add_argument('--hpec_residual_calibration_batch_weight', type=float, default=0.5,
+                        help='hybrid校准在测试期使用当前batch统计的权重')
+    parser.add_argument('--hpec_teacher_distill_weight', type=float, default=0.0,
+                        help='可选 distillation 校准消融权重；默认关闭，仅用于测试小样本 logits 校准是否有帮助')
+    parser.add_argument('--hpec_teacher_distill_temperature', type=float, default=2.0,
+                        help='HPEC distillation 校准的 softmax 温度')
+    parser.add_argument('--hpec_teacher_detach', type=int, default=1,
+                        help='是否阻断参考 logits 的梯度；默认 1 表示参考分布只用于校准消融')
+    parser.add_argument('--hpec_z_radius_loss_weight', type=float, default=0.0,
+                        help='模块 4 防止 z_global 退回双曲球中心的半径正则权重')
+    parser.add_argument('--hpec_z_radius_target', type=float, default=0.3,
+                        help='模块 4 z_global 半径正则的目标 Poincare 半径')
+    parser.add_argument('--hpec_prototype_separation_loss_weight', type=float, default=0.0,
+                        help='模块 4 prototype 方向分离正则权重，用于避免多原型挤在同一方向')
+    parser.add_argument('--hpec_prototype_separation_max_cos', type=float, default=0.35,
+                        help='prototype 分离正则允许的最大余弦相似度')
+    parser.add_argument('--module34_branch_ce_decay_epochs', type=int, default=0,
+                        help='模块3/4分支CE在前N个epoch线性衰减；0表示不调度')
+    parser.add_argument('--module34_branch_ce_min_ratio', type=float, default=1.0,
+                        help='模块3/4分支CE衰减后的最低比例，避免完全关闭模块监督')
+    parser.add_argument('--hpec_busemann_temperature', type=float, default=2.0,
                         help='Busemann energy 聚合多个 prototype 时的温度')
-    parser.add_argument('--hpec_data_init', type=int, default=1,
+    parser.add_argument('--hpec_busemann_radius_gate_weight', type=float, default=0.0,
+                        help='Busemann radius gate weight; 0 disables this calibration')
+    parser.add_argument('--hpec_busemann_radius_gate_center', type=float, default=0.3,
+                        help='Busemann radius gate center')
+    parser.add_argument('--hpec_data_init', type=int, default=0,
                         help='是否用首个训练 batch 的类别中心 warm-start HPEC prototype')
-    parser.add_argument('--lambda_hpec_mle', type=float, default=0.0,
-                        help='HPEC 多 prototype 最大似然损失 L_mle 的权重')
-    parser.add_argument('--lambda_hpec_pcl', type=float, default=0.0,
-                        help='HPEC prototype contrastive loss L_pcl 的权重')
-    parser.add_argument('--lambda_hpec_pal', type=float, default=0.0,
-                        help='HPEC prototype alignment loss L_pal 的权重')
-    parser.add_argument('--lambda_hpec_radius_reg', type=float, default=0.0,
-                        help='HPEC prototype 半径正则权重')
-    parser.add_argument('--lambda_hpec_diversity', type=float, default=0.0,
-                        help='HPEC 多 prototype diversity 正则权重')
-    parser.add_argument('--lambda_hpec_hsic', type=float, default=0.01,
-                        help='HPEC prototype HSIC 去相关/近似正交正则权重')
-    parser.add_argument('--lambda_hpec_intra_orthogonal', type=float, default=0.0,
-                        help='HPEC 同类多 prototype 内部近似正交/多样性正则权重')
-    parser.add_argument('--lambda_hpec_inter_margin', type=float, default=0.02,
-                        help='HPEC 异类 prototype 间隔分离正则权重')
-    parser.add_argument('--lambda_hpec_ce_aux', type=float, default=0.0,
-                        help='HPEC energy matrix 额外交叉熵辅助 loss 权重')
-    parser.add_argument('--lambda_hpec_energy_loss', type=float, default=0.0,
-                        help='模块 4 HPEC energy loss 作为最终 CE 之外结构项的权重')
-    parser.add_argument('--hpec_use_sinkhorn_ema', type=int, default=1,
-                        help='HPEC prototype 是否启用 Sinkhorn 均衡分配和 EMA 更新')
-    parser.add_argument('--hpec_sinkhorn_epsilon', type=float, default=0.05,
-                        help='HPEC Sinkhorn 温度/平滑系数')
-    parser.add_argument('--hpec_sinkhorn_iters', type=int, default=3,
-                        help='HPEC Sinkhorn 迭代步数')
+    parser.add_argument('--hpec_prototype_update_mode', type=str, default='reliable_tp_ema',
+                        choices=['reliable_tp_ema', 'epoch_reliable_frechet_ema', 'sinkhorn_ema', 'none'],
+                        help='HPEC原型更新：epoch_reliable_frechet_ema按完整epoch执行独立流形EMA')
+    parser.add_argument('--hpec_reliable_confidence_threshold', type=float, default=0.70,
+                        help='可靠TP原型更新的真实类别最小预测概率')
+    parser.add_argument('--hpec_reliable_view_consistency_threshold', type=float, default=0.55,
+                        help='互补视图启用时可靠TP所需的最小切空间余弦一致性')
+    parser.add_argument('--hpec_reliable_min_samples', type=int, default=2,
+                        help='一个类内prototype执行可靠EMA所需的最少TP样本数')
+    parser.add_argument('--hpec_reliable_weight_floor', type=float, default=0.05,
+                        help='epoch流形EMA中低置信样本的最小连续权重')
+    parser.add_argument('--hpec_epoch_frechet_steps', type=int, default=3,
+                        help='epoch原型目标中心的Karcher迭代次数')
     parser.add_argument('--hpec_ema_alpha', type=float, default=0.995,
                         help='HPEC prototype EMA 更新的历史保留系数')
     parser.add_argument('--hpec_ema_anchor_weight', type=float, default=0.15,
                         help='HPEC prototype EMA 更新时保留初始分散方向的权重')
-    parser.add_argument('--hpec_ema_update_epochs', type=int, default=5,
-                        help='HPEC prototype ??? N ? epoch ??? EMA ???????????')
-    parser.add_argument('--hpec_trainable_prototypes', type=int, default=0,
+    parser.add_argument('--hpec_ema_start_epoch', type=int, default=20,
+                        help='可靠TP原型EMA开始的epoch，先让模块3/4形成初始表征')
+    parser.add_argument('--hpec_ema_update_epochs', type=int, default=-1,
+                        help='HPEC prototype EMA更新持续epoch数；负数表示warm-up后全程更新')
+    parser.add_argument('--hpec_trainable_prototypes', type=int, default=1,
                         help='HPEC prototype 是否参与训练；0 表示固定 prototype')
+    parser.add_argument('--hpec_prototype_lr_scale', type=float, default=1.0,
+                        help='HPEC prototype/边界偏置学习率缩放；<1 表示慢速原型更新')
+    parser.add_argument('--hpec_prototype_parameterization', type=str, default='poincare_point',
+                        choices=['poincare_point', 'tangent_direction'],
+                        help='HPEC prototype 参数化：poincare_point 为现有 Poincare 点；tangent_direction 为固定半径、只学习 Busemann 理想方向')
     parser.add_argument('--hpec_init_steps', type=int, default=500,
                         help='HPEC hyperspherical separation prototype 初始化步数')
     parser.add_argument('--hpec_eps', type=float, default=1e-7,
                         help='HPEC 角度、孔径和除法计算中的数值稳定 eps')
+    parser.add_argument('--mac_min_radius', type=float, default=0.05,
+                        help='LP-Brain-HPEC MAC 安全环带最小 Poincare 半径，低于该值会沿方向外推')
+    parser.add_argument('--mac_max_radius', type=float, default=0.98,
+                        help='LP-Brain-HPEC MAC 安全环带最大 Poincare 半径，高于该值会拉回球内')
+    parser.add_argument('--hbr_safe_radius', type=float, default=2.0,
+                        help='LP-Brain-HPEC HBR 的安全双曲半径，超过后产生软惩罚')
+    parser.add_argument('--hbr_loss_weight', type=float, default=0.0,
+                        help='LP-Brain-HPEC HBR 半径惩罚权重；0 表示只记录诊断不参与 loss')
 
     # ==================== S-DeCI GCN fallback ====================
     parser = root_parser.add_argument_group('==================== S-DeCI GCN fallback ====================')
@@ -397,6 +540,15 @@ if __name__ == '__main__':
                         help='S-DeCI 普通 GCN fallback 是否给 adjacency 添加 self-loop')
     parser.add_argument('--gcn_fallback_adjacency_normalization', type=str, default='row',
                         choices=['row', 'sym', 'none'], help='S-DeCI 普通 GCN fallback 的 adjacency 归一化方式')
+    parser.add_argument('--gcn_fallback_readout_mode', type=str, default='mean_std',
+                        choices=['mean', 'attention', 'mean_max', 'mean_std'],
+                        help='S-DeCI 模块 3/4 关闭时 GCN fallback 的节点读出方式')
+    parser.add_argument('--gcn_fallback_input_residual_weight', type=float, default=0.0,
+                        help='S-DeCI 模块 3/4 关闭时 GCN fallback 保留原始节点特征的残差强度')
+    parser.add_argument('--gcn_fallback_directional_propagation', type=int, default=1,
+                        help='是否分别编码因果图的入边、出边及方向差异')
+    parser.add_argument('--gcn_fallback_edge_readout_topk', type=int, default=0,
+                        help='S-DeCI GCN fallback 额外读取每个样本最强 top-k 边端点特征；0 表示关闭')
 
     # ==================== 可视化与诊断 ====================
     parser = root_parser.add_argument_group('==================== 可视化与诊断 ====================')
@@ -497,6 +649,11 @@ if __name__ == '__main__':
     parser.add_argument('--print_metric_every', type=int, default=10,
                         help='每隔多少个 epoch 打印 loss 和训练/验证指标；0 表示仅由 print_process 控制')
     parser.add_argument('--print_data_info', type=int, default=0, help='是否打印数据加载信息')
+
+    parser.add_argument('--use_tensorboard', type=int, default=1, help='是否启用 TensorBoard 标量日志')
+    parser.add_argument('--tensorboard_dir', type=str, default='outputs/tensorboard', help='TensorBoard 日志根目录')
+    parser.add_argument('--tensorboard_run_name', type=str, default=None, help='TensorBoard run 名称；默认使用 setting')
+    parser.add_argument('--tensorboard_disable_smoke_runs', type=int, default=1, help='run 名称包含 smoke 时是否跳过 TensorBoard 记录')
 
     # ==================== GPU 与 CPU 绑定 ====================
     parser = root_parser.add_argument_group('==================== GPU 与 CPU 绑定 ====================')

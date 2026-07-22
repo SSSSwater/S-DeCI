@@ -102,6 +102,22 @@ python extract_re.py
 
 This script will automatically aggregate and organize the logs, generating the final performance tables based on the best hyperparameter configurations.
 
+### Local Training Workbench
+
+To launch a local browser UI for starting dataset-specific training, editing common
+hyperparameters, inspecting existing logs, and comparing experiment branches, run:
+
+```powershell
+.\start_training_dashboard.ps1
+```
+
+Then open `http://127.0.0.1:8765`. The workbench uses the existing `test_*_best_config.py`
+entry scripts and scans `outputs`, `outputs/logs`, `outputs/sweep_logs`, and
+`outputs/model_compare_logs` for final metrics. New background jobs write to
+`outputs/dashboard_runs`. Every future `test_*_best_config.py` training run also
+writes a structured record to `outputs/training_records`, containing the full
+effective argument set, command, status, timestamps, and final metrics.
+
 ## Acknowledgment
 
 We appreciate the following GitHub repos a lot for their valuable code and efforts:
@@ -124,4 +140,3 @@ If you find this repo helpful, please cite our paper.
   doi          = {10.48550/arXiv.2602.08262}
 }
 ```
-

@@ -9,7 +9,7 @@
 - 模块 1：启用 DeCI/Cycle，并在训练期加入随机时间窗、temporal dropout、ROI dropout 与可选 denoising auxiliary loss。
 - 模块 2：启用 temporal SEM 因果图学习，输入优先来自模块 1 增强后的时序，并保留 DAG、稀疏、平滑和样本残差图正则。
 - 模块 3：启用 HGCN 双曲 readout，使用模块 2 输出的因果图作为 adjacency，并在训练期支持 causal edge dropout。
-- 模块 4：启用 HPEC 多 prototype energy loss，使用训练 fold 内 batch warm-start，并加入 prototype 半径与 diversity 正则。
+- 模块 4：启用 HPEC 多 prototype energy loss，支持 trainable prototype / EMA 更新，并加入 teacher distill、`z_global` 半径约束与 prototype separation 诊断。
 
 GCN fallback 仍保留，但只作为显式消融对照。ABIDE 默认配置不关闭模块 2，也不关闭模块 3/4。
 
@@ -28,13 +28,14 @@ ABIDE 专用脚本默认使用 `seq_len=120`、`use_deci_module1=1`、`use_causa
 - `--lambda-sample-graph-l1 0.0001`
 - `--lambda-sample-graph-deviation 0.001`
 - `--causal-edge-dropout 0.15`
-- `--lambda-hgcn-radius-reg 0.001`
-- `--lambda-hpec-radius-reg 0.001`
-- `--lambda-hpec-diversity 0.01`
+- `--hpec-teacher-distill-weight 1.0`
+- `--hpec-z-radius-loss-weight 0.1`
+- `--hpec-prototype-separation-loss-weight 0.2`
+- `--hpec-trainable-prototypes 1`
 
 ## 诊断输出
 
-训练日志会按类别输出 loss 和指标，包括模块 1 denoise loss、模块 2 temporal SEM / DAG / stability loss、模块 3 半径正则、模块 4 HPEC / prototype loss，以及 train/test accuracy、precision、recall、macro F1、ROC AUC。
+训练日志会按类别输出 loss 和指标，包括模块 1 denoise loss、模块 2 temporal SEM / DAG / stability loss、模块 3 双曲表示诊断、模块 4 HPEC final CE / energy / teacher distill / 半径约束 / prototype separation，以及 train/test accuracy、precision、recall、macro F1、ROC AUC。
 
 显式设置 `--visualize-causal 1` 时，会保存 train/test 中间量 heatmap 和最终 epoch 的 train/test t-SNE。t-SNE 使用 train/test 不同 marker、label 不同颜色，并显示 HPEC prototype。
 
@@ -45,8 +46,8 @@ ABIDE 专用脚本默认使用 `seq_len=120`、`use_deci_module1=1`、`use_causa
 ```powershell
 --module1-random-crop 0 --module1-temporal-dropout 0 --module1-roi-dropout 0 `
 --module1-denoise-loss-weight 0 --lambda-causal-stability 0 `
---causal-edge-dropout 0 --lambda-hgcn-radius-reg 0 `
---lambda-hpec-radius-reg 0 --lambda-hpec-diversity 0
+--causal-edge-dropout 0 --hpec-teacher-distill-weight 0 `
+--hpec-z-radius-loss-weight 0 --hpec-prototype-separation-loss-weight 0
 ```
 
 若只做 GCN fallback 消融，显式设置：

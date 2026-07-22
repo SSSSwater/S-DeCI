@@ -1,0 +1,152 @@
+Hyperparameter sweep
+  script: E:\WorkingSpace\my_experience\test_mdd_best_config.py
+  param : --causal-complementary-instance-loss-weight
+  values: 0.10, 0.30
+  tensorboard group: mdd_braincl_infonce_50ep
+
+================================================================================
+[1/2] --causal-complementary-instance-loss-weight=0.10
+E:\WorkingSpace\my_experience\.venv\Scripts\python.exe E:\WorkingSpace\my_experience\test_mdd_best_config.py --causal-complementary-instance-loss-weight 0.10 --use-tensorboard 1 --tensorboard-dir outputs/tensorboard --tensorboard-run-name mdd_braincl_infonce_50ep/causal_complementary_instance_loss_weight_0.10 --tensorboard-disable-smoke-runs 1 --max-folds 5 --train-epochs 50 --visualize-causal 0 --use-causal-complementary-learning 1 --causal-complementary-max-mask-ratio 0.20 --causal-complementary-warmup-epochs 25 --causal-complementary-ramp-epochs 8 --causal-complementary-mask-temperature 0.7 --causal-complementary-instance-temperature 0.7 --causal-complementary-masked-ce-weight 0.25 --causal-complementary-view-loss-weight 0 --use-multi-hop-causal-encoding 0 --hpec-prototype-update-mode reliable_tp_ema --hpec-ema-start-epoch 20 --hpec-ema-update-epochs -1 --hpec-ema-anchor-weight 0.10
+================================================================================
+Standalone MDD best-config test:
+  [run] data=MDD, path=E:\WorkingSpace\my_experience\dataset\MDD, protocol=AAL116, folds=5, max_folds=5, epochs=50, batch_size=32, lr=0.001, device=cuda
+  modules: module1=1, module2=1, module3(HGCN)=1, module4(HPEC)=1
+Use GPU: cuda:0
+Number of parameters: 1.41M
+
+Cross-validation:   0%|                                                       | 0/5 [00:00<?, ?it/s]
+Cross-validation:  20%|????????????????????                                     | 1/5 [01:26<05:47, 86.82s/it]Fold 1/5 S-DeCI modules: use_deci_module1=1, use_causal_module2=1, use_hgcn_module3=1, use_hpec_module4=1, use_hyperbolic_modules34=1, classification_path=gcn_fallback_plus_hgcn_hpec_dual_consensus, node_feature=alff_falff_physiological_feature, adjacency=causal_graph_blended_with_sample_correlation
+
+========================================================================
+Epoch 1/50 | train_best_threshold: 0.47 | train_best_macro_f1: 0.4982 | val_best_threshold: 0.50 | val_best_macro_f1: 0.5762
+------------------------------------------------------------------------
+[Loss] total_loss: 1.7949 | cls_loss: 1.0151 | aux_loss: 0.7798 | hpec_final_ce: 0.6946 | hpec_energy_w: 0.1398 | temporal_pred: 0.7798 | dag_loss: 6.811e-04 | temporal_sparse: 0.0118 | temporal_smooth: 0.0039 | val_loss: 1.0116 | m34_branch_ce_w: 0.1458 | sample_l1: 0.0005 | sample_dev: 0.0000
+------------------------------------------------------------------------
+[Graph Diagnostics] dag_raw: 0.3458 | graph_mass: 0.0019 | direction: 0.6543 | alag_mass: 0.0019 | alag_direction: 0.6543 | a0_mass: 0.0536 | a0_direction: 0.1237 | attn_entropy: 0.0000 | gate_mass: 0.0000 | graph_delta: 0.0005 | z_radius: 0.6201 | z_tangent: 0.7255 | fc_residual: 0.0000 | fc_anchor_gate: 0.0000 | fc_anchor_update: 0.0000 | film_scale: 0.0000 | film_shift: 0.0000 | proto_cos_mean: 0.3333 | proto_cos_max: 0.3994 | proto_same_max: 0.3994 | proto_radius: 0.2913 | proto_logit_margin: 0.0535 | proto_logit_abs: 0.0267 | energy_margin: 0.0498 | sim_margin: 0.0000 | hpec_cal_margin: 0.4122 | pos_prob: 0.4574
+------------------------------------------------------------------------
+[Train Metrics] train_acc: 0.5633 | train_precision: 0.4937 | train_recall: 0.4943 | train_macro_f1: 0.4925 | train_roc_auc: 0.4932
+------------------------------------------------------------------------
+[Validation Metrics] val_acc: 0.6875 | val_precision: 0.6446 | val_recall: 0.5825 | val_macro_f1: 0.5762 | val_roc_auc: 0.6101
+========================================================================
+[Train Branch Metrics] final_cached: acc=0.5633, f1=0.4925, auc=0.4932 | gcn_fallback: acc=0.6392, f1=0.4660, auc=0.5046 | gcn_fc_only: acc=0.4209, f1=0.4206, auc=0.4684 | gcn_graph_only: acc=0.5253, f1=0.4873, auc=0.5002 | hpec_energy: acc=0.4304, f1=0.4296, auc=0.4748 | module34_branch: acc=0.4747, f1=0.4633, auc=0.4809
+[Validation Branch Metrics] final_cached: acc=0.6875, f1=0.5762, auc=0.6101 | gcn_fallback: acc=0.6625, f1=0.3985, auc=0.6171 | gcn_fc_only: acc=0.3375, f1=0.2523, auc=0.4640 | gcn_graph_only: acc=0.6625, f1=0.3985, auc=0.5080 | hpec_energy: acc=0.6625, f1=0.3985, auc=0.5367 | module34_branch: acc=0.5250, f1=0.4933, auc=0.6017
+
+========================================================================
+Epoch 10/50 | train_best_threshold: 0.46 | train_best_macro_f1: 0.7058 | val_best_threshold: 0.43 | val_best_macro_f1: 0.6323
+------------------------------------------------------------------------
+[Loss] total_loss: 1.3979 | cls_loss: 0.8597 | aux_loss: 0.5382 | hpec_final_ce: 0.5778 | hpec_energy_w: 0.1269 | temporal_pred: 0.5381 | dag_loss: 0.0010 | temporal_sparse: 0.0128 | temporal_smooth: 0.0042 | val_loss: 1.0142 | m34_branch_ce_w: 0.1211 | sample_l1: 0.0005 | sample_dev: 0.0000
+------------------------------------------------------------------------
+[Graph Diagnostics] dag_raw: 0.4078 | graph_mass: 0.0020 | direction: 0.6568 | alag_mass: 0.0020 | alag_direction: 0.6568 | a0_mass: 0.0582 | a0_direction: 0.1237 | attn_entropy: 0.0000 | gate_mass: 0.0000 | graph_delta: 0.0005 | z_radius: 0.5659 | z_tangent: 0.6416 | fc_residual: 0.0000 | fc_anchor_gate: 0.0000 | fc_anchor_update: 0.0000 | film_scale: 0.0000 | film_shift: 0.0000 | proto_cos_mean: 0.3333 | proto_cos_max: 0.3994 | proto_same_max: 0.3994 | proto_radius: 0.2913 | proto_logit_margin: 0.5621 | proto_logit_abs: 0.2810 | energy_margin: 0.5583 | sim_margin: 0.0000 | hpec_cal_margin: 0.4052 | pos_prob: 0.3812
+------------------------------------------------------------------------
+[Train Metrics] train_acc: 0.7500 | train_precision: 0.7467 | train_recall: 0.6650 | train_macro_f1: 0.6760 | train_roc_auc: 0.7579
+------------------------------------------------------------------------
+[Validation Metrics] val_acc: 0.6875 | val_precision: 0.6446 | val_recall: 0.5825 | val_macro_f1: 0.5762 | val_roc_auc: 0.6080
+========================================================================
+[Train Branch Metrics] final_cached: acc=0.7500, f1=0.6760, auc=0.7579 | gcn_fallback: acc=0.7247, f1=0.6432, auc=0.6902 | gcn_fc_only: acc=0.3703, f1=0.3701, auc=0.4232 | gcn_graph_only: acc=0.5032, f1=0.4700, auc=0.4746 | hpec_energy: acc=0.6614, f1=0.3981, auc=0.7643 | module34_branch: acc=0.7025, f1=0.6843, auc=0.7572
+[Validation Branch Metrics] final_cached: acc=0.6875, f1=0.5762, auc=0.6080 | gcn_fallback: acc=0.6750, f1=0.5803, auc=0.5863 | gcn_fc_only: acc=0.3000, f1=0.2533, auc=0.4563 | gcn_graph_only: acc=0.6625, f1=0.3985, auc=0.5122 | hpec_energy: acc=0.6625, f1=0.3985, auc=0.5912 | module34_branch: acc=0.6250, f1=0.5879, auc=0.5611
+
+========================================================================
+Epoch 20/50 | train_best_threshold: 0.41 | train_best_macro_f1: 0.7433 | val_best_threshold: 0.38 | val_best_macro_f1: 0.6354
+------------------------------------------------------------------------
+[Loss] total_loss: 1.3454 | cls_loss: 0.8149 | aux_loss: 0.5305 | hpec_final_ce: 0.5393 | hpec_energy_w: 0.1273 | temporal_pred: 0.5305 | dag_loss: 0.0015 | temporal_sparse: 0.0138 | temporal_smooth: 0.0045 | val_loss: 1.0151 | m34_branch_ce_w: 0.1142 | sample_l1: 0.0006 | sample_dev: 0.0000
+------------------------------------------------------------------------
+[Graph Diagnostics] dag_raw: 0.4765 | graph_mass: 0.0022 | direction: 0.6503 | alag_mass: 0.0022 | alag_direction: 0.6503 | a0_mass: 0.0629 | a0_direction: 0.1237 | attn_entropy: 0.0000 | gate_mass: 0.0000 | graph_delta: 0.0006 | z_radius: 0.5154 | z_tangent: 0.5701 | fc_residual: 0.0000 | fc_anchor_gate: 0.0000 | fc_anchor_update: 0.0000 | film_scale: 0.0000 | film_shift: 0.0000 | proto_cos_mean: 0.3333 | proto_cos_max: 0.3994 | proto_same_max: 0.3994 | proto_radius: 0.2913 | proto_logit_margin: 0.5721 | proto_logit_abs: 0.2861 | energy_margin: 0.5712 | sim_margin: 0.0000 | hpec_cal_margin: 0.4004 | pos_prob: 0.3960
+------------------------------------------------------------------------
+[Train Metrics] train_acc: 0.7627 | train_precision: 0.7609 | train_recall: 0.6837 | train_macro_f1: 0.6971 | train_roc_auc: 0.8083
+------------------------------------------------------------------------
+[Validation Metrics] val_acc: 0.6875 | val_precision: 0.6446 | val_recall: 0.5825 | val_macro_f1: 0.5762 | val_roc_auc: 0.6101
+========================================================================
+[Train Branch Metrics] final_cached: acc=0.7627, f1=0.6971, auc=0.8083 | gcn_fallback: acc=0.7310, f1=0.6593, auc=0.6941 | gcn_fc_only: acc=0.3449, f1=0.3430, auc=0.3872 | gcn_graph_only: acc=0.5633, f1=0.5102, auc=0.5242 | hpec_energy: acc=0.6614, f1=0.3981, auc=0.8425 | module34_branch: acc=0.7532, f1=0.7269, auc=0.8400
+[Validation Branch Metrics] final_cached: acc=0.6875, f1=0.5762, auc=0.6101 | gcn_fallback: acc=0.6625, f1=0.5573, auc=0.5898 | gcn_fc_only: acc=0.3000, f1=0.2533, auc=0.4277 | gcn_graph_only: acc=0.6625, f1=0.3985, auc=0.5150 | hpec_energy: acc=0.6625, f1=0.3985, auc=0.6052 | module34_branch: acc=0.6500, f1=0.6011, auc=0.5765
+
+========================================================================
+Epoch 30/50 | train_best_threshold: 0.42 | train_best_macro_f1: 0.7963 | val_best_threshold: 0.38 | val_best_macro_f1: 0.6366
+------------------------------------------------------------------------
+[Loss] total_loss: 1.7977 | cls_loss: 0.7563 | aux_loss: 0.5272 | hpec_final_ce: 0.4881 | hpec_energy_w: 0.1272 | temporal_pred: 0.5272 | dag_loss: 0.0019 | temporal_sparse: 0.0145 | temporal_smooth: 0.0048 | val_loss: 1.0333 | m34_branch_ce_w: 0.1071 | sample_l1: 0.0006 | sample_dev: 0.0000
+------------------------------------------------------------------------
+[Graph Diagnostics] dag_raw: 0.5269 | graph_mass: 0.0023 | direction: 0.6526 | alag_mass: 0.0023 | alag_direction: 0.6526 | a0_mass: 0.0661 | a0_direction: 0.1237 | attn_entropy: 0.0000 | gate_mass: 0.0000 | graph_delta: 0.0006 | z_radius: 0.4549 | z_tangent: 0.4909 | fc_residual: 0.0000 | fc_anchor_gate: 0.0000 | fc_anchor_update: 0.0000 | film_scale: 0.0000 | film_shift: 0.0000 | proto_cos_mean: 0.2648 | proto_cos_max: 0.6255 | proto_same_max: 0.6256 | proto_radius: 0.2677 | proto_logit_margin: 0.5621 | proto_logit_abs: 0.2811 | energy_margin: 0.5469 | sim_margin: 0.0000 | hpec_cal_margin: 0.4005 | pos_prob: 0.3942
+------------------------------------------------------------------------
+[Train Metrics] train_acc: 0.7975 | train_precision: 0.8060 | train_recall: 0.7283 | train_macro_f1: 0.7462 | train_roc_auc: 0.8745
+------------------------------------------------------------------------
+[Validation Metrics] val_acc: 0.6875 | val_precision: 0.6446 | val_recall: 0.5825 | val_macro_f1: 0.5762 | val_roc_auc: 0.6122
+========================================================================
+[Train Branch Metrics] final_cached: acc=0.7975, f1=0.7462, auc=0.8745 | gcn_fallback: acc=0.7690, f1=0.7095, auc=0.7336 | gcn_fc_only: acc=0.3449, f1=0.3446, auc=0.3745 | gcn_graph_only: acc=0.5380, f1=0.4910, auc=0.5179 | hpec_energy: acc=0.6614, f1=0.3981, auc=0.9085 | module34_branch: acc=0.8703, f1=0.8512, auc=0.9238
+[Validation Branch Metrics] final_cached: acc=0.6875, f1=0.5762, auc=0.6122 | gcn_fallback: acc=0.6500, f1=0.5480, auc=0.5898 | gcn_fc_only: acc=0.3000, f1=0.2627, auc=0.4186 | gcn_graph_only: acc=0.6625, f1=0.3985, auc=0.5213 | hpec_energy: acc=0.6625, f1=0.3985, auc=0.6918 | module34_branch: acc=0.5875, f1=0.5429, auc=0.5975
+
+========================================================================
+Epoch 40/50 | train_best_threshold: 0.36 | train_best_macro_f1: 0.7948 | val_best_threshold: 0.47 | val_best_macro_f1: 0.6126
+------------------------------------------------------------------------
+[Loss] total_loss: 1.7948 | cls_loss: 0.7566 | aux_loss: 0.5250 | hpec_final_ce: 0.4931 | hpec_energy_w: 0.1278 | temporal_pred: 0.5250 | dag_loss: 0.0022 | temporal_sparse: 0.0148 | temporal_smooth: 0.0049 | val_loss: 1.0311 | m34_branch_ce_w: 0.1021 | sample_l1: 0.0006 | sample_dev: 0.0000
+------------------------------------------------------------------------
+[Graph Diagnostics] dag_raw: 0.5510 | graph_mass: 0.0024 | direction: 0.6537 | alag_mass: 0.0024 | alag_direction: 0.6537 | a0_mass: 0.0676 | a0_direction: 0.1237 | attn_entropy: 0.0000 | gate_mass: 0.0000 | graph_delta: 0.0006 | z_radius: 0.4537 | z_tangent: 0.4893 | fc_residual: 0.0000 | fc_anchor_gate: 0.0000 | fc_anchor_update: 0.0000 | film_scale: 0.0000 | film_shift: 0.0000 | proto_cos_mean: 0.3510 | proto_cos_max: 0.6203 | proto_same_max: 0.6194 | proto_radius: 0.2746 | proto_logit_margin: 0.4548 | proto_logit_abs: 0.2274 | energy_margin: 0.4486 | sim_margin: 0.0000 | hpec_cal_margin: 0.4092 | pos_prob: 0.3990
+------------------------------------------------------------------------
+[Train Metrics] train_acc: 0.7911 | train_precision: 0.7966 | train_recall: 0.7212 | train_macro_f1: 0.7383 | train_roc_auc: 0.8851
+------------------------------------------------------------------------
+[Validation Metrics] val_acc: 0.6875 | val_precision: 0.6446 | val_recall: 0.5825 | val_macro_f1: 0.5762 | val_roc_auc: 0.6150
+========================================================================
+[Train Branch Metrics] final_cached: acc=0.7911, f1=0.7383, auc=0.8851 | gcn_fallback: acc=0.7532, f1=0.6950, auc=0.7297 | gcn_fc_only: acc=0.3576, f1=0.3576, auc=0.4338 | gcn_graph_only: acc=0.5380, f1=0.4931, auc=0.4963 | hpec_energy: acc=0.6614, f1=0.3981, auc=0.9762 | module34_branch: acc=0.8956, f1=0.8796, auc=0.9644
+[Validation Branch Metrics] final_cached: acc=0.6875, f1=0.5762, auc=0.6150 | gcn_fallback: acc=0.6500, f1=0.5480, auc=0.5905 | gcn_fc_only: acc=0.3000, f1=0.2627, auc=0.4123 | gcn_graph_only: acc=0.6625, f1=0.3985, auc=0.5199 | hpec_energy: acc=0.6625, f1=0.3985, auc=0.6702 | module34_branch: acc=0.5750, f1=0.5248, auc=0.5779
+
+========================================================================
+Epoch 50/50 | train_best_threshold: 0.42 | train_best_macro_f1: 0.7787 | val_best_threshold: 0.39 | val_best_macro_f1: 0.6191
+------------------------------------------------------------------------
+[Loss] total_loss: 1.7982 | cls_loss: 0.7591 | aux_loss: 0.5247 | hpec_final_ce: 0.4931 | hpec_energy_w: 0.1302 | temporal_pred: 0.5247 | dag_loss: 0.0022 | temporal_sparse: 0.0149 | temporal_smooth: 0.0049 | val_loss: 1.0292 | m34_branch_ce_w: 0.1021 | sample_l1: 0.0006 | sample_dev: 0.0000
+------------------------------------------------------------------------
+[Graph Diagnostics] dag_raw: 0.5555 | graph_mass: 0.0024 | direction: 0.6553 | alag_mass: 0.0024 | alag_direction: 0.6553 | a0_mass: 0.0679 | a0_direction: 0.1237 | attn_entropy: 0.0000 | gate_mass: 0.0000 | graph_delta: 0.0006 | z_radius: 0.4569 | z_tangent: 0.4934 | fc_residual: 0.0000 | fc_anchor_gate: 0.0000 | fc_anchor_update: 0.0000 | film_scale: 0.0000 | film_shift: 0.0000 | proto_cos_mean: 0.3974 | proto_cos_max: 0.8520 | proto_same_max: 0.5267 | proto_radius: 0.2896 | proto_logit_margin: 0.2412 | proto_logit_abs: 0.1206 | energy_margin: 0.2961 | sim_margin: 0.0000 | hpec_cal_margin: 0.4174 | pos_prob: 0.3945
+------------------------------------------------------------------------
+[Train Metrics] train_acc: 0.8070 | train_precision: 0.8312 | train_recall: 0.7332 | train_macro_f1: 0.7537 | train_roc_auc: 0.8728
+------------------------------------------------------------------------
+[Validation Metrics] val_acc: 0.6875 | val_precision: 0.6446 | val_recall: 0.5825 | val_macro_f1: 0.5762 | val_roc_auc: 0.6143
+========================================================================
+[Train Branch Metrics] final_cached: acc=0.8070, f1=0.7537, auc=0.8728 | gcn_fallback: acc=0.7500, f1=0.6833, auc=0.6954 | gcn_fc_only: acc=0.3449, f1=0.3449, auc=0.3975 | gcn_graph_only: acc=0.5380, f1=0.4910, auc=0.4958 | hpec_energy: acc=0.6614, f1=0.3981, auc=0.9635 | module34_branch: acc=0.9082, f1=0.8963, auc=0.9721
+[Validation Branch Metrics] final_cached: acc=0.6875, f1=0.5762, auc=0.6143 | gcn_fallback: acc=0.6500, f1=0.5480, auc=0.5919 | gcn_fc_only: acc=0.3000, f1=0.2627, auc=0.4109 | gcn_graph_only: acc=0.6625, f1=0.3985, auc=0.5178 | hpec_energy: acc=0.6625, f1=0.3985, auc=0.6618 | module34_branch: acc=0.5875, f1=0.5345, auc=0.5744
+Fold 1 final-epoch test raw-threshold: accuracy=0.6875, precision=0.6446, recall=0.5825, macro_f1=0.5762, roc_auc=0.6024
+Fold 1 training wall time: 86.81s
+Fold 1 final-epoch test raw diagnostics: target_counts=[53, 27] | pred_counts=[68, 12] | prob_pos[min/mean/max]=0.2305/0.3997/0.9367
+[Fold 1 Raw Test Branch Metrics] final_cached: acc=0.6875, f1=0.5762, auc=0.6024 | gcn_fallback: acc=0.6500, f1=0.5480, auc=0.5912 | gcn_fc_only: acc=0.3125, f1=0.2714, auc=0.4256 | gcn_graph_only: acc=0.6625, f1=0.3985, auc=0.5164 | hpec_energy: acc=0.6625, f1=0.3985, auc=0.6576 | module34_branch: acc=0.6000, f1=0.5528, auc=0.5814
+Fold 1 final-epoch test uses final-epoch threshold: 0.3900
+Fold 1 final-epoch test thresholded diagnostics: target_counts=[53, 27] | pred_counts=[49, 31] | prob_pos[min/mean/max]=0.2305/0.3997/0.9367
+
+Cross-validation:  40%|??????????????????????????????????????                            | 2/5 [02:51<04:16, 85.65s/it]Fold 2/5 S-DeCI modules: use_deci_module1=1, use_causal_module2=1, use_hgcn_module3=1, use_hpec_module4=1, use_hyperbolic_modules34=1, classification_path=gcn_fallback_plus_hgcn_hpec_dual_consensus, node_feature=alff_falff_physiological_feature, adjacency=causal_graph_blended_with_sample_correlation
+
+========================================================================
+Epoch 1/50 | train_best_threshold: 0.46 | train_best_macro_f1: 0.5106 | val_best_threshold: 0.45 | val_best_macro_f1: 0.5496
+------------------------------------------------------------------------
+[Loss] total_loss: 1.7711 | cls_loss: 0.9919 | aux_loss: 0.7792 | hpec_final_ce: 0.6764 | hpec_energy_w: 0.1394 | temporal_pred: 0.7792 | dag_loss: 6.811e-04 | temporal_sparse: 0.0118 | temporal_smooth: 0.0039 | val_loss: 1.0287 | m34_branch_ce_w: 0.1414 | sample_l1: 0.0005 | sample_dev: 0.0000
+------------------------------------------------------------------------
+[Graph Diagnostics] dag_raw: 0.3458 | graph_mass: 0.0019 | direction: 0.6602 | alag_mass: 0.0019 | alag_direction: 0.6602 | a0_mass: 0.0536 | a0_direction: 0.1237 | attn_entropy: 0.0000 | gate_mass: 0.0000 | graph_delta: 0.0005 | z_radius: 0.6311 | z_tangent: 0.7436 | fc_residual: 0.0000 | fc_anchor_gate: 0.0000 | fc_anchor_update: 0.0000 | film_scale: 0.0000 | film_shift: 0.0000 | proto_cos_mean: 0.3333 | proto_cos_max: 0.3994 | proto_same_max: 0.3994 | proto_radius: 0.2913 | proto_logit_margin: 0.0516 | proto_logit_abs: 0.0258 | energy_margin: 0.0494 | sim_margin: 0.0000 | hpec_cal_margin: 0.3975 | pos_prob: 0.4393
+------------------------------------------------------------------------
+[Train Metrics] train_acc: 0.6025 | train_precision: 0.5117 | train_recall: 0.5084 | train_macro_f1: 0.4974 | train_roc_auc: 0.5374
+------------------------------------------------------------------------
+[Validation Metrics] val_acc: 0.6709 | val_precision: 0.3354 | val_recall: 0.5000 | val_macro_f1: 0.4015 | val_roc_auc: 0.5015
+========================================================================
+[Train Branch Metrics] final_cached: acc=0.6025, f1=0.4974, auc=0.5374 | gcn_fallback: acc=0.6309, f1=0.4371, auc=0.5255 | gcn_fc_only: acc=0.4795, f1=0.4787, auc=0.5237 | gcn_graph_only: acc=0.5142, f1=0.4870, auc=0.4503 | hpec_energy: acc=0.4574, f1=0.4558, auc=0.4769 | module34_branch: acc=0.4953, f1=0.4819, auc=0.5358
+[Validation Branch Metrics] final_cached: acc=0.6709, f1=0.4015, auc=0.5015 | gcn_fallback: acc=0.6709, f1=0.4015, auc=0.5958 | gcn_fc_only: acc=0.3418, f1=0.2685, auc=0.2946 | gcn_graph_only: acc=0.6709, f1=0.4015, auc=0.4492 | hpec_energy: acc=0.6709, f1=0.4015, auc=0.6495 | module34_branch: acc=0.4051, f1=0.4016, auc=0.4768
+
+========================================================================
+Epoch 10/50 | train_best_threshold: 0.47 | train_best_macro_f1: 0.6677 | val_best_threshold: 0.49 | val_best_macro_f1: 0.7165
+------------------------------------------------------------------------
+[Loss] total_loss: 1.4077 | cls_loss: 0.8701 | aux_loss: 0.5376 | hpec_final_ce: 0.5882 | hpec_energy_w: 0.1274 | temporal_pred: 0.5376 | dag_loss: 0.0010 | temporal_sparse: 0.0128 | temporal_smooth: 0.0042 | val_loss: 0.9689 | m34_branch_ce_w: 0.1206 | sample_l1: 0.0005 | sample_dev: 0.0000
+------------------------------------------------------------------------
+[Graph Diagnostics] dag_raw: 0.4078 | graph_mass: 0.0020 | direction: 0.6574 | alag_mass: 0.0020 | alag_direction: 0.6574 | a0_mass: 0.0582 | a0_direction: 0.1237 | attn_entropy: 0.0000 | gate_mass: 0.0000 | graph_delta: 0.0005 | z_radius: 0.5825 | z_tangent: 0.6665 | fc_residual: 0.0000 | fc_anchor_gate: 0.0000 | fc_anchor_update: 0.0000 | film_scale: 0.0000 | film_shift: 0.0000 | proto_cos_mean: 0.3333 | proto_cos_max: 0.3994 | proto_same_max: 0.3994 | proto_radius: 0.2913 | proto_logit_margin: 0.5599 | proto_logit_abs: 0.2800 | energy_margin: 0.5615 | sim_margin: 0.0000 | hpec_cal_margin: 0.3840 | pos_prob: 0.4163
+------------------------------------------------------------------------
+[Train Metrics] train_acc: 0.7098 | train_precision: 0.6763 | train_recall: 0.6322 | train_macro_f1: 0.6382 | train_roc_auc: 0.7372
+------------------------------------------------------------------------
+[Validation Metrics] val_acc: 0.7722 | val_precision: 0.7546 | val_recall: 0.7028 | val_macro_f1: 0.7165 | val_roc_auc: 0.6800
+========================================================================
+[Train Branch Metrics] final_cached: acc=0.7098, f1=0.6382, auc=0.7372 | gcn_fallback: acc=0.6688, f1=0.5941, auc=0.6567 | gcn_fc_only: acc=0.4227, f1=0.4227, auc=0.4790 | gcn_graph_only: acc=0.5647, f1=0.5274, auc=0.5184 | hpec_energy: acc=0.6593, f1=0.3973, auc=0.7693 | module34_branch: acc=0.7003, f1=0.6701, auc=0.7706
+[Validation Branch Metrics] final_cached: acc=0.7722, f1=0.7165, auc=0.6800 | gcn_fallback: acc=0.7342, f1=0.6645, auc=0.6778 | gcn_fc_only: acc=0.2785, f1=0.2476, auc=0.2409 | gcn_graph_only: acc=0.6709, f1=0.4015, auc=0.4543 | hpec_energy: acc=0.6709, f1=0.4015, auc=0.5377 | module34_branch: acc=0.5316, f1=0.4996, auc=0.4884
+
+========================================================================
+Epoch 20/50 | train_best_threshold: 0.40 | train_best_macro_f1: 0.7994 | val_best_threshold: 0.46 | val_best_macro_f1: 0.6820
+------------------------------------------------------------------------
+[Loss] total_loss: 1.3204 | cls_loss: 0.7899 | aux_loss: 0.5305 | hpec_final_ce: 0.5187 | hpec_energy_w: 0.1272 | temporal_pred: 0.5305 | dag_loss: 0.0015 | temporal_sparse: 0.0138 | temporal_smooth: 0.0046 | val_loss: 0.9738 | m34_branch_ce_w: 0.1099 | sample_l1: 0.0006 | sample_dev: 0.0000
+------------------------------------------------------------------------
+[Graph Diagnostics] dag_raw: 0.4765 | graph_mass: 0.0022 | direction: 0.6613 | alag_mass: 0.0022 | alag_direction: 0.6613 | a0_mass: 0.0629 | a0_direction: 0.1237 | attn_entropy: 0.0000 | gate_mass: 0.0000 | graph_delta: 0.0006 | z_radius: 0.5191 | z_tangent: 0.5751 | fc_residual: 0.0000 | fc_anchor_gate: 0.0000 | fc_anchor_update: 0.0000 | film_scale: 0.0000 | film_shift: 0.0000 | proto_cos_mean: 0.3333 | proto_cos_max: 0.3994 | proto_same_max: 0.3994 | proto_radius: 0.2913 | proto_logit_margin: 0.6015 | proto_logit_abs: 0.3008 | energy_margin: 0.6037 | sim_margin: 0.0000 | hpec_cal_margin: 0.4037 | pos_prob: 0.3976
+------------------------------------------------------------------------
+[Train Metrics] train_acc: 0.7855 | train_precision: 0.7995 | train_recall: 0.7098 | train_macro_f1: 0.7267 | train_roc_auc: 0.8673
+------------------------------------------------------------------------
+[Validation Metrics] val_acc: 0.7342 | val_precision: 0.7083 | val_recall: 0.6451 | val_macro_f1: 0.6542 | val_roc_auc: 0.6531
+========================================================================
+[Train Branch Metrics] final_cached: acc=0.7855, f1=0.7267, auc=0.8673 | gcn_fallback: acc=0.7382, f1=0.6600, auc=0.7224 | gcn_fc_only: acc=0.4164, f1=0.4096, auc=0.4024 | gcn_graph_only: acc=0.5142, f1=0.4766, auc=0.4794 | hpec_energy: acc=0.6593, f1=0.3973, auc=0.8958 | module34_branch: acc=0.8139, f1=0.7951, auc=0.8970
+[Validation Branch Metrics] final_cached: acc=0.7342, f1=0.6542, auc=0.6531 | gcn_fallback: acc=0.7215, f1=0.6535, auc=0.6560 | gcn_fc_only: acc=0.2532, f1=0.2355, auc=0.2228 | gcn_graph_only: acc=0.6709, f1=0.4015, auc=0.4441 | hpec_energy: acc=0.6709, f1=0.4015, auc=0.5392 | module34_branch: acc=0.5190, f1=0.4655, auc=0.4956

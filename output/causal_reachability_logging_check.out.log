@@ -1,0 +1,43 @@
+Standalone MDD best-config test:
+  [run] data=MDD, path=E:\WorkingSpace\my_experience\dataset\MDD, protocol=AAL116, folds=5, max_folds=1, epochs=2, batch_size=32, lr=0.001, device=cuda
+  modules: module1=1, module2=1, module3(HGCN)=1, module4(HPEC)=1
+Use GPU: cuda:0
+Number of parameters: 1.41M
+Fold 1/5 S-DeCI modules: use_deci_module1=1, use_causal_module2=1, use_hgcn_module3=1, use_hpec_module4=1, use_hyperbolic_modules34=1, classification_path=gcn_fallback_plus_hgcn_hpec_dual_consensus, node_feature=alff_falff_physiological_feature, adjacency=causal_graph_blended_with_sample_correlation
+
+========================================================================
+Epoch 1/2 | train_best_threshold: 0.45 | train_best_macro_f1: 0.5426 | val_best_threshold: 0.40 | val_best_macro_f1: 0.5763
+------------------------------------------------------------------------
+[Loss] total_loss: 1.7657 | cls_loss: 0.9860 | aux_loss: 0.7797 | hpec_final_ce: 0.6762 | hpec_energy_w: 0.1361 | temporal_pred: 0.7797 | dag_loss: 6.811e-04 | temporal_sparse: 0.0118 | temporal_smooth: 0.0039 | val_loss: 0.9946 | m34_branch_ce_w: 0.1394 | sample_l1: 0.0005 | sample_dev: 0.0000
+------------------------------------------------------------------------
+[Graph Diagnostics] dag_raw: 0.3458 | graph_mass: 0.0019 | direction: 0.6551 | alag_mass: 0.0019 | alag_direction: 0.6551 | a0_mass: 0.0536 | a0_direction: 0.1237 | attn_entropy: 0.0000 | gate_mass: 0.0000 | graph_delta: 0.0005 | z_radius: 0.6357 | z_tangent: 0.7513 | fc_residual: 0.0000 | fc_anchor_gate: 0.0000 | fc_anchor_update: 0.0000 | film_scale: 0.0000 | film_shift: 0.0000 | proto_cos_mean: 0.3333 | proto_cos_max: 0.3994 | proto_same_max: 0.3994 | proto_radius: 0.2913 | proto_logit_margin: 0.0679 | proto_logit_abs: 0.0340 | energy_margin: 0.0809 | sim_margin: 0.0000 | hpec_cal_margin: 0.4044 | pos_prob: 0.4525
+------------------------------------------------------------------------
+[Train Metrics] train_acc: 0.5823 | train_precision: 0.5122 | train_recall: 0.5109 | train_macro_f1: 0.5091 | train_roc_auc: 0.5513
+------------------------------------------------------------------------
+[Validation Metrics] val_acc: 0.6750 | val_precision: 0.6282 | val_recall: 0.5458 | val_macro_f1: 0.5145 | val_roc_auc: 0.5996
+========================================================================
+[Train Branch Metrics] final_cached: acc=0.5823, f1=0.5091, auc=0.5513 | gcn_fallback: acc=0.6013, f1=0.4591, auc=0.5314 | gcn_fc_only: acc=0.4462, f1=0.4217, auc=0.4308 | gcn_graph_only: acc=0.5981, f1=0.5291, auc=0.5324 | hpec_energy: acc=0.6487, f1=0.4019, auc=0.5149 | module34_branch: acc=0.5380, f1=0.5169, auc=0.5577
+[Validation Branch Metrics] final_cached: acc=0.6750, f1=0.5145, auc=0.5996 | gcn_fallback: acc=0.6625, f1=0.3985, auc=0.5856 | gcn_fc_only: acc=0.5875, f1=0.4589, auc=0.4444 | gcn_graph_only: acc=0.6625, f1=0.3985, auc=0.4724 | hpec_energy: acc=0.6625, f1=0.3985, auc=0.6247 | module34_branch: acc=0.6000, f1=0.5673, auc=0.5716
+
+========================================================================
+Epoch 2/2 | train_best_threshold: 0.43 | train_best_macro_f1: 0.5721 | val_best_threshold: 0.40 | val_best_macro_f1: 0.6267
+------------------------------------------------------------------------
+[Loss] total_loss: 1.7169 | cls_loss: 0.9902 | aux_loss: 0.7268 | hpec_final_ce: 0.6784 | hpec_energy_w: 0.1344 | temporal_pred: 0.7268 | dag_loss: 6.968e-04 | temporal_sparse: 0.0118 | temporal_smooth: 0.0039 | val_loss: 0.9965 | m34_branch_ce_w: 0.1432 | sample_l1: 0.0005 | sample_dev: 0.0000
+------------------------------------------------------------------------
+[Graph Diagnostics] dag_raw: 0.3492 | graph_mass: 0.0019 | direction: 0.6547 | alag_mass: 0.0019 | alag_direction: 0.6547 | a0_mass: 0.0539 | a0_direction: 0.1237 | attn_entropy: 0.0000 | gate_mass: 0.0000 | graph_delta: 0.0005 | z_radius: 0.6365 | z_tangent: 0.7525 | fc_residual: 0.0000 | fc_anchor_gate: 0.0000 | fc_anchor_update: 0.0000 | film_scale: 0.0000 | film_shift: 0.0000 | proto_cos_mean: 0.3333 | proto_cos_max: 0.3994 | proto_same_max: 0.3994 | proto_radius: 0.2913 | proto_logit_margin: 0.1262 | proto_logit_abs: 0.0631 | energy_margin: 0.1421 | sim_margin: 0.0000 | hpec_cal_margin: 0.4054 | pos_prob: 0.4097
+------------------------------------------------------------------------
+[Train Metrics] train_acc: 0.6013 | train_precision: 0.4655 | train_recall: 0.4819 | train_macro_f1: 0.4493 | train_roc_auc: 0.5462
+------------------------------------------------------------------------
+[Validation Metrics] val_acc: 0.6625 | val_precision: 0.5878 | val_recall: 0.5273 | val_macro_f1: 0.4846 | val_roc_auc: 0.6038
+========================================================================
+[Train Branch Metrics] final_cached: acc=0.6013, f1=0.4493, auc=0.5462 | gcn_fallback: acc=0.6582, f1=0.3969, auc=0.5705 | gcn_fc_only: acc=0.5127, f1=0.4844, auc=0.5071 | gcn_graph_only: acc=0.5696, f1=0.5173, auc=0.5134 | hpec_energy: acc=0.6614, f1=0.3981, auc=0.5335 | module34_branch: acc=0.5222, f1=0.5061, auc=0.5184
+[Validation Branch Metrics] final_cached: acc=0.6625, f1=0.4846, auc=0.6038 | gcn_fallback: acc=0.6625, f1=0.3985, auc=0.5898 | gcn_fc_only: acc=0.6500, f1=0.4771, auc=0.4521 | gcn_graph_only: acc=0.6625, f1=0.3985, auc=0.4752 | hpec_energy: acc=0.6625, f1=0.3985, auc=0.6464 | module34_branch: acc=0.5875, f1=0.5503, auc=0.5807
+Fold 1 final-epoch test raw-threshold: accuracy=0.5625, precision=0.5064, recall=0.5063, macro_f1=0.5063, roc_auc=0.5674
+Fold 1 training wall time: 8.15s
+Fold 1 final-epoch test raw diagnostics: target_counts=[53, 27] | pred_counts=[54, 26] | prob_pos[min/mean/max]=0.3937/0.4963/0.6981
+[Fold 1 Raw Test Branch Metrics] final_cached: acc=0.5625, f1=0.5063, auc=0.5674 | gcn_fallback: acc=0.5625, f1=0.5063, auc=0.4801 | gcn_fc_only: acc=0.3750, f1=0.3687, auc=0.3962 | gcn_graph_only: acc=0.6625, f1=0.3985, auc=0.4773 | hpec_energy: acc=0.6625, f1=0.3985, auc=0.6198 | module34_branch: acc=0.5625, f1=0.5152, auc=0.5604
+Fold 1 final-epoch test uses final-epoch threshold: 0.4000
+Fold 1 final-epoch test thresholded diagnostics: target_counts=[53, 27] | pred_counts=[1, 79] | prob_pos[min/mean/max]=0.3937/0.4963/0.6981
+Final-epoch Test Avg (raw) accuracy: 0.5625, precision: 0.5064, recall: 0.5063, macro_f1: 0.5063, roc_auc: 0.5674, train_seconds: 8.76, avg_fold_seconds: 8.15
+Standalone MDD best-config test completed.
+accuracy: 0.5625, precision: 0.5064, recall: 0.5063, macro_f1: 0.5063, roc_auc: 0.5674, train_seconds: 8.76s
