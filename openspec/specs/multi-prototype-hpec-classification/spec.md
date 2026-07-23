@@ -1,4 +1,4 @@
-﻿## Purpose
+## Purpose
 
 定义模块 4 HPEC 的每类多 prototype 分类能力：用多个 prototype 表达同一类别内部的连接模式差异，并通过 prototype-level energy、相似度、可选 distillation 校准、半径约束和 prototype separation 支持诊断与训练。
 

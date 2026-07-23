@@ -1,12 +1,12 @@
-﻿## Purpose
+## Purpose
 
 定义 `S-DeCI` 模块 4 的 HPEC 原型能量分类能力：使用模块 3 输出的双曲中心点 `z_global` 与类别 prototype 计算 HPEC angle、aperture/psi、energy matrix、prediction 和 `Loss_HPEC`。
 
 ## Requirements
 
-### Requirement: 模块 4 可选支持 Lorentz-to-Poincare bridge 实验对照
+### Requirement: 模块 4 的 Lorentz-to-Poincare bridge 历史实验边界
 
-模块 4 MAY 在 `lp_brain_hpec` 路径中将模块 3 的 Lorentz 图级 embedding 通过显式 stereographic bridge 投影到 Poincare Ball，再执行 HPEC prototype energy 分类。该路径只属于 experimental/消融对照；默认主路线 MUST 使用模块 3 `hgcn_hpec` 产生的 Poincare `z_global` 直接进入 HPEC 多原型能量层，不得把 bridge、MAC 或 HBR 写成默认必经步骤。
+Lorentz-to-Poincare bridge、MAC 与 HBR 已完成 LP-Brain-HPEC 负向实验并退出当前可执行路径。下列公式仅作为历史实验和失败诊断记录。默认主路线 MUST 使用模块 3 产生的 Poincare `z_global` 直接进入 HPEC 多原型能量层，不得把 bridge、MAC 或 HBR 写成当前必经步骤或损失项。
 
 #### Scenario: 执行显式 bridge
 - **GIVEN** `graph_lorentz` 的形状为 `[B, D + 1]`
@@ -51,9 +51,9 @@ $$
 
 - **AND** 文档 MUST 说明这些量只用于诊断，不参与默认 `hgcn_hpec` 主路线；设计原因是 Lorentz-to-Poincare bridge 可能把样本压到原点附近或推向边界，半径统计可以直接暴露该数值问题
 
-### Requirement: 模块 4 可选支持 MAC 半径裁剪
+### Requirement: 模块 4 的 MAC 半径裁剪历史记录
 
-模块 4 MAY 在 LP-Brain-HPEC 实验路径中支持 MAC(Mobius Annulus Clipping) 或等价半径安全环带裁剪，避免样本表示挤到中心或越过球边界。默认 `hgcn_hpec` 主路线不得依赖 MAC 作为核心分类步骤。
+MAC(Mobius Annulus Clipping) 只记录已退役 LP-Brain-HPEC 实验的半径安全策略。当前 HGCN-HPEC 主路线 SHALL 不依赖 MAC，也不得把它加入默认 loss。
 
 #### Scenario: 低半径样本被推入安全环带
 - **GIVEN** Poincare 表示 `z` 的范数低于 `mac_min_radius`
@@ -131,9 +131,9 @@ $$
 
 - **AND** 文档 MUST 说明 MAC 来源于双曲空间数值稳定中的半径安全区间思想；设计原因是避免点靠近原点时 cone aperture 过宽、靠近边界时距离和梯度不稳定。该诊断不应写入默认主路线 loss
 
-### Requirement: 模块 4 可选支持 HBR 半径惩罚
+### Requirement: 模块 4 的 HBR 半径惩罚历史记录
 
-模块 4 MAY 支持 HBR(Hyperbolic Boundary Regularization) 软惩罚，用于限制样本过度靠近 Poincare Ball 边界。HBR 只属于 LP-Brain-HPEC 或数值稳定消融实验，不应加入默认主路线损失。
+HBR(Hyperbolic Boundary Regularization) 只记录已退役 LP-Brain-HPEC 的边界正则实验。当前 HGCN-HPEC 主路线 SHALL 不把 HBR 加入总 loss。
 
 #### Scenario: 计算 HBR loss
 - **GIVEN** MAC 后的 Poincare 表示 `z_stable`
@@ -165,9 +165,9 @@ $$
 - **THEN** HBR loss MUST 不影响总 loss
 - **AND** 诊断字段 MUST 显示为 0 或等价空贡献
 
-### Requirement: LP-Brain-HPEC 实验路径保持 HPEC energy final classifier
+### Requirement: LP-Brain-HPEC energy-only 分类历史记录
 
-当用户显式启用 `module34_arch == "lp_brain_hpec"` 实验路径时，该路径 SHALL 继续使用 HPEC energy/prototype 作为最终分类依据，而不是退回普通线性分类头。该约束只用于保证实验路径语义自洽；默认主路线仍是 `hgcn_hpec` 产生 Poincare `z_global` 后进入 HPEC 多原型能量层。
+本节只记录已完成 LP-Brain-HPEC 实验中 energy-only 分类的语义，不构成当前可执行路径。当前主路线 SHALL 由 Poincare `z_global` 进入 HPEC 多原型能量层，并与欧氏局部结构证据进行 dual-view evidence fusion。
 
 #### Scenario: 使用最小 energy 预测
 - **GIVEN** MAC 后 Poincare 表示已经输入 HPEC energy 层
@@ -325,7 +325,7 @@ $$
 
 ### Requirement: HPEC energy loss
 
-模块 4 SHALL 提供 HPEC energy loss 和 HPEC logits。默认 `hgcn_hpec` 主路线中，HPEC 不直接替换全部分类路径，而是先形成双曲原型证据，再与欧氏局部结构 logits 融合；只有 `lp_brain_hpec` 等显式 experimental energy-only 路径 MAY 使用纯 `argmin(energy_matrix)` 作为最终预测。
+模块 4 SHALL 提供 HPEC energy loss 和 HPEC logits。默认 HGCN-HPEC 主路线中，HPEC 不直接替换全部分类路径，而是先形成双曲原型证据，再与欧氏局部结构 logits 融合；纯 `argmin(energy_matrix)` 只作为历史 energy-only 实验口径保留。
 
 #### Scenario: 计算 HPEC loss
 
@@ -576,7 +576,7 @@ $$
 
 ### Requirement: HPEC prototype 初始化与 warm-start
 
-模块 4 SHOULD 支持 hyperspherical separation 初始化，并可选使用训练 batch 的 `z_global` 做 prototype warm-start。warm-start 的目的是让 prototype 起点接近真实嵌入分布，但不得把测试标签或真实因果图泄漏进训练。
+模块 4 SHALL 提供不泄漏测试信息的 prototype 初始化，并 SHOULD 支持 hyperspherical separation 初始化以及可选使用训练 batch 的 `z_global` 做 prototype warm-start。warm-start 的目的是让 prototype 起点接近真实嵌入分布，但不得把测试标签或真实因果图泄漏进训练。
 
 #### Scenario: 使用 batch warm-start 初始化 prototype
 
@@ -716,7 +716,7 @@ $$
 
 ### Requirement: HPEC prototype Sinkhorn EMA 慢更新
 
-模块 4 SHOULD 支持 Sinkhorn EMA 更新 prototype。默认主路线中，prototype 不应无约束快速追随每个 batch 的训练噪声。
+模块 4 SHALL 保留可切换的 prototype 更新策略，并 SHOULD 支持 Sinkhorn EMA 作为 legacy 对照。默认主路线中，prototype 不应无约束快速追随每个 batch 的训练噪声。
 
 #### Scenario: 计算 Sinkhorn EMA prototype 更新
 
@@ -809,13 +809,13 @@ $$
 
 - **AND** 文档 MUST 说明 Sinkhorn 分配的原因是避免多个 prototype 被同一批少数样本占用，EMA 的原因是让 prototype 更像稳定类别中心而不是 batch 噪声
 
-### Requirement: 模块 4 支持标准与互补视图诊断
+### Requirement: 模块 4 只使用标准视图诊断
 
-模块 4 SHALL 在训练期互补视图启用时输出可比较的 HPEC energy 与 prototype 匹配量，而最终预测保持使用标准视图 logits。
+模块 4 SHALL 只为当前标准视图输出 HPEC energy 与 prototype 匹配诊断；已验证无正收益的互补视图不进入当前 forward。
 
-#### Scenario: 互补视图不改变评估预测
-- **GIVEN** 互补视图训练机制已启用
-- **WHEN** 模块 4 接收标准和互补 `z_global`
-- **THEN** 系统 MUST 缓存两视图 HPEC 诊断
-- **AND** 验证、测试和推理指标 MUST 使用标准视图最终 logits
+#### Scenario: 标准视图决定预测
+- **WHEN** 模块 4 接收标准 `z_global`
+- **THEN** 系统 MUST 缓存标准视图 HPEC 诊断
+- **AND** 训练、验证、测试和推理指标 MUST 使用标准视图最终 logits
+- **AND** MUST NOT 要求互补 `z_global`
 

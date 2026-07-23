@@ -9,13 +9,13 @@
 - **AND** 当前为训练 batch 且已完成标准视图 forward
 - **WHEN** 系统筛选 prototype 更新样本
 - **THEN** 样本 MUST 同时满足训练标签为目标类、最终标准 logits 预测正确和真实类概率不低于 `hpec_reliable_confidence_threshold`
-- **AND** 互补视图启用时，样本 MUST 满足 `hpec_reliable_view_consistency_threshold` 或等价一致性门槛
+- **AND** 更新 MUST 不依赖互补视图、companion embedding 或视图一致性阈值
 - **AND** 验证、测试和推理样本 MUST 不参与筛选或更新
 
 #### Scenario: 可靠样本独立移动 prototype
 - **GIVEN** 一个类-原型对拥有不少于 `hpec_reliable_min_samples` 的可靠样本
 - **WHEN** 训练 batch 完成 `optimizer.step()` 后更新 prototype
-- **THEN** 系统 MUST 在 `torch.no_grad()` 或等价无梯度上下文中，根据同类最小 energy prototype 分配计算可靠样本的切空间加权中心
+- **THEN** 系统 MUST 在 `torch.no_grad()` 或等价无梯度上下文中，根据同类最小 energy prototype 分配计算可靠样本的切空间中心
 - **AND** MUST 将该中心与初始化锚点混合后按 `hpec_reliable_ema_alpha` 执行 EMA
 - **AND** MUST 在映回 Poincare Ball 前执行半径壳投影或等价有效区域约束
 - **AND** 更新 MUST 不依赖额外 prototype loss，也不得执行第二次 backward

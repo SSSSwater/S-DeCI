@@ -219,12 +219,6 @@ class Exp_Main(Exp_Basic):
         if not callable(update):
             return {}
         return update(labels)
-    def _finalize_epoch_prototype_update(self):
-        model = self._model_for_aux_loss()
-        finalize = getattr(model, "finalize_epoch_prototype_update", None)
-        if not callable(finalize):
-            return {}
-        return finalize()
     def _get_model_cached_prediction_probability(self):
         model = self._model_for_aux_loss()
         get_prediction = getattr(model, "get_latest_prediction", None)
@@ -554,9 +548,6 @@ class Exp_Main(Exp_Basic):
             "lambda_causal_dag": getattr(self.args, "lambda_causal_dag", None),
             "module2_sample_correlation_blend": getattr(self.args, "module2_sample_correlation_blend", None),
             "module2_graph_residual_alpha": getattr(self.args, "module2_graph_residual_alpha", None),
-            "mac_min_radius": getattr(self.args, "mac_min_radius", None),
-            "mac_max_radius": getattr(self.args, "mac_max_radius", None),
-            "hbr_loss_weight": getattr(self.args, "hbr_loss_weight", None),
             "hpec_energy_loss_weight": getattr(self.args, "hpec_energy_loss_weight", None),
             "hpec_logit_temperature": getattr(self.args, "hpec_logit_temperature", None),
             "hpec_prototypes_per_class": getattr(self.args, "hpec_prototypes_per_class", None),
@@ -785,8 +776,6 @@ Config label: `{config_label}`
                     [
                         "CompareTrend/Module34/z_radius",
                         "CompareTrend/Module34/z_tangent_norm",
-                        "CompareTrend/Module34/lp_mac_radius",
-                        "CompareTrend/Module34/lp_hbr_loss",
                         "CompareTrend/Module34/prototype_cos_mean",
                         "CompareTrend/Module34/prototype_cos_max",
                         "CompareTrend/Module34/prototype_same_class_cos_max",
@@ -804,22 +793,11 @@ Config label: `{config_label}`
                     ],
                 ],
             },
-            "Complementary": {
-                "mask_and_invariance": [
-                    "Multiline",
-                    [
-                        "CompareTrend/Complementary/mask_ratio",
-                        "CompareTrend/Complementary/poincare_distance",
-                        "CompareTrend/Complementary/view_loss",
-                        "CompareTrend/Complementary/instance_infonce_loss",
-                        "CompareTrend/Complementary/masked_ce_loss",
-                    ],
-                ],
-                "prototype_updates": [
+            "PrototypeUpdate": {
+                "reliable_ema": [
                     "Multiline",
                     [
                         "CompareTrend/PrototypeUpdate/reliable_tp_ratio",
-                        "CompareTrend/PrototypeUpdate/view_consistency_mean",
                         "CompareTrend/PrototypeUpdate/assignment_entropy",
                         "CompareTrend/PrototypeUpdate/ema_displacement_mean",
                     ],
@@ -908,19 +886,8 @@ Config label: `{config_label}`
             "temporal_lag_hierarchy_loss": "Loss/module2_lag_hierarchy",
             "hpec_final_ce_loss": "Loss/module4_hpec_final_ce",
             "hpec_energy_weighted_loss": "Loss/module4_hpec_energy_weighted",
-            "complementary_view_loss": "Complementary/view_loss",
-            "complementary_view_weighted_loss": "Complementary/view_loss_weighted",
-            "complementary_view_distance": "Complementary/poincare_distance",
-            "complementary_instance_infonce_loss": "Complementary/instance_infonce_loss",
-            "complementary_instance_infonce_weighted_loss": "Complementary/instance_infonce_weighted",
-            "complementary_masked_ce_loss": "Complementary/masked_ce_loss",
-            "complementary_masked_ce_weighted_loss": "Complementary/masked_ce_weighted",
-            "complementary_mask_ratio": "Complementary/mask_ratio",
-            "complementary_topology_salience_entropy": "Complementary/topology_salience_entropy",
-            "complementary_semantic_salience_entropy": "Complementary/semantic_salience_entropy",
             "hpec_reliable_tp_ratio": "PrototypeUpdate/reliable_tp_ratio",
             "hpec_reliable_confidence_mean": "PrototypeUpdate/reliable_confidence_mean",
-            "hpec_reliable_view_consistency_mean": "PrototypeUpdate/view_consistency_mean",
             "hpec_reliable_assignment_entropy": "PrototypeUpdate/assignment_entropy",
             "hpec_reliable_updated_prototype_count": "PrototypeUpdate/updated_count",
             "hpec_reliable_unupdated_prototype_count": "PrototypeUpdate/unupdated_count",
@@ -948,8 +915,6 @@ Config label: `{config_label}`
             "module34_center_inter_loss": "Loss/module34_center_inter",
             "module34_branch_ce_loss": "Loss/module34_branch_ce",
             "module34_branch_ce_weighted_loss": "Loss/module34_branch_ce_weighted",
-            "lp_hbr_loss": "Loss/module34_lp_hbr",
-            "lp_hbr_weighted_loss": "Loss/module34_lp_hbr_weighted",
             "epoch_seconds": "Timing/epoch_seconds",
             "train_accuracy": "Metrics/train_accuracy",
             "train_precision": "Metrics/train_precision",
@@ -1024,18 +989,6 @@ Config label: `{config_label}`
             "final_logit_bias_mean": "Diagnostics/final_logit_bias",
             "hgcn_radial_calibration_enabled": "Diagnostics/hgcn_radial_calibration_enabled",
             "hgcn_radial_target_norm_mean": "Diagnostics/hgcn_radial_target_norm_mean",
-            "lp_lorentz_constraint_error": "Diagnostics/lp_lorentz_constraint",
-            "lp_in_aggregation_norm": "Diagnostics/lp_in_aggregation_norm",
-            "lp_out_aggregation_norm": "Diagnostics/lp_out_aggregation_norm",
-            "lp_alpha_out": "Diagnostics/lp_alpha_out",
-            "lp_centroid_message_weight": "Diagnostics/lp_centroid_message_weight",
-            "lp_in_attention_temperature": "Diagnostics/lp_in_attention_temperature",
-            "lp_out_attention_temperature": "Diagnostics/lp_out_attention_temperature",
-            "lp_mac_radius_mean": "Diagnostics/lp_mac_radius",
-            "lp_mac_radius_max": "Diagnostics/lp_mac_radius_max",
-            "lp_mac_low_clip_ratio": "Diagnostics/lp_mac_low_clip_ratio",
-            "lp_mac_high_clip_ratio": "Diagnostics/lp_mac_high_clip_ratio",
-            "lp_stats_update_gate_mean": "Diagnostics/lp_stats_update_gate",
             "prototype_cos_abs_mean": "Diagnostics/prototype_cos_mean",
             "prototype_cos_abs_max": "Diagnostics/prototype_cos_max",
             "prototype_same_class_cos_max": "Diagnostics/prototype_same_class_cos_max",
@@ -1049,14 +1002,6 @@ Config label: `{config_label}`
             "hpec_causal_role_energy_std": "Diagnostics/hpec_causal_role_energy_std",
             "hpec_causal_role_gate_entropy": "Diagnostics/hpec_causal_role_gate_entropy",
             "hpec_causal_role_gate_peak": "Diagnostics/hpec_causal_role_gate_peak",
-            "hpec_epoch_sample_count": "Diagnostics/hpec_epoch_sample_count",
-            "hpec_epoch_reliability_mean": "Diagnostics/hpec_epoch_reliability_mean",
-            "hpec_epoch_occupancy_min": "Diagnostics/hpec_epoch_occupancy_min",
-            "hpec_epoch_occupancy_max": "Diagnostics/hpec_epoch_occupancy_max",
-            "hpec_epoch_occupancy_entropy": "Diagnostics/hpec_epoch_occupancy_entropy",
-            "hpec_epoch_updated_prototype_count": "Diagnostics/hpec_epoch_updated_prototype_count",
-            "hpec_epoch_prototype_movement_mean": "Diagnostics/hpec_epoch_prototype_movement_mean",
-            "hpec_epoch_prototype_movement_max": "Diagnostics/hpec_epoch_prototype_movement_max",
             "hpec_busemann_class_bias_abs_mean": "Diagnostics/hpec_busemann_class_bias_abs_mean",
             "hpec_busemann_class_bias_gap": "Diagnostics/hpec_busemann_class_bias_gap",
             "hpec_busemann_class_bias_weight": "Diagnostics/hpec_busemann_class_bias_weight",
@@ -1119,8 +1064,6 @@ Config label: `{config_label}`
             "module34_branch_ce_loss",
             "module34_branch_ce_weighted_loss",
             "module34_center_cos_mean",
-            "lp_hbr_loss",
-            "lp_hbr_weighted_loss",
             "epoch_seconds",
             "causal_meta_shared_adjacency_mass_mean",
             "causal_meta_shared_adjacency_directionality_ratio",
@@ -1168,18 +1111,6 @@ Config label: `{config_label}`
             "final_logit_bias_mean",
             "hgcn_radial_calibration_enabled",
             "hgcn_radial_target_norm_mean",
-            "lp_lorentz_constraint_error",
-            "lp_in_aggregation_norm",
-            "lp_out_aggregation_norm",
-            "lp_alpha_out",
-            "lp_centroid_message_weight",
-            "lp_in_attention_temperature",
-            "lp_out_attention_temperature",
-            "lp_mac_radius_mean",
-            "lp_mac_radius_max",
-            "lp_mac_low_clip_ratio",
-            "lp_mac_high_clip_ratio",
-            "lp_stats_update_gate_mean",
             "prototype_cos_abs_mean",
             "prototype_cos_abs_max",
             "prototype_same_class_cos_max",
@@ -1278,19 +1209,8 @@ Config label: `{config_label}`
             "temporal_smooth_loss": "CompareTrend/Module2/smooth_loss",
             "temporal_group_sparse_loss": "CompareTrend/Module2/group_sparse_loss",
             "temporal_lag_hierarchy_loss": "CompareTrend/Module2/lag_hierarchy_loss",
-            "complementary_view_loss": "CompareTrend/Complementary/view_loss",
-            "complementary_view_weighted_loss": "CompareTrend/Complementary/view_loss_weighted",
-            "complementary_view_distance": "CompareTrend/Complementary/poincare_distance",
-            "complementary_instance_infonce_loss": "CompareTrend/Complementary/instance_infonce_loss",
-            "complementary_instance_infonce_weighted_loss": "CompareTrend/Complementary/instance_infonce_weighted",
-            "complementary_masked_ce_loss": "CompareTrend/Complementary/masked_ce_loss",
-            "complementary_masked_ce_weighted_loss": "CompareTrend/Complementary/masked_ce_weighted",
-            "complementary_mask_ratio": "CompareTrend/Complementary/mask_ratio",
-            "complementary_topology_salience_entropy": "CompareTrend/Complementary/topology_salience_entropy",
-            "complementary_semantic_salience_entropy": "CompareTrend/Complementary/semantic_salience_entropy",
             "hpec_reliable_tp_ratio": "CompareTrend/PrototypeUpdate/reliable_tp_ratio",
             "hpec_reliable_confidence_mean": "CompareTrend/PrototypeUpdate/reliable_confidence_mean",
-            "hpec_reliable_view_consistency_mean": "CompareTrend/PrototypeUpdate/view_consistency_mean",
             "hpec_reliable_assignment_entropy": "CompareTrend/PrototypeUpdate/assignment_entropy",
             "hpec_reliable_updated_prototype_count": "CompareTrend/PrototypeUpdate/updated_count",
             "hpec_reliable_unupdated_prototype_count": "CompareTrend/PrototypeUpdate/unupdated_count",
@@ -1317,8 +1237,6 @@ Config label: `{config_label}`
             "module34_branch_ce_loss": "CompareTrend/Module34/branch_ce",
             "module34_branch_ce_weighted_loss": "CompareTrend/Module34/branch_ce_weighted",
             "module34_center_cos_mean": "CompareTrend/Module34/center_cos_mean",
-            "lp_hbr_loss": "CompareTrend/Module34/lp_hbr_loss",
-            "lp_hbr_weighted_loss": "CompareTrend/Module34/lp_hbr_weighted_loss",
             "epoch_seconds": "CompareTrend/Timing/epoch_seconds",
             "train_accuracy": "CompareTrend/Metrics/train_accuracy",
             "train_precision": "CompareTrend/Metrics/train_precision",
@@ -1360,18 +1278,6 @@ Config label: `{config_label}`
             "hyperbolic_update_logit_abs_mean": "CompareTrend/Module34/hyperbolic_update_logit_abs",
             "hgcn_radial_calibration_enabled": "CompareTrend/Module34/hgcn_radial_calibration_enabled",
             "hgcn_radial_target_norm_mean": "CompareTrend/Module34/hgcn_radial_target_norm_mean",
-            "lp_lorentz_constraint_error": "CompareTrend/Module34/lp_lorentz_constraint",
-            "lp_in_aggregation_norm": "CompareTrend/Module34/lp_in_aggregation_norm",
-            "lp_out_aggregation_norm": "CompareTrend/Module34/lp_out_aggregation_norm",
-            "lp_alpha_out": "CompareTrend/Module34/lp_alpha_out",
-            "lp_centroid_message_weight": "CompareTrend/Module34/lp_centroid_message_weight",
-            "lp_in_attention_temperature": "CompareTrend/Module34/lp_in_attention_temperature",
-            "lp_out_attention_temperature": "CompareTrend/Module34/lp_out_attention_temperature",
-            "lp_mac_radius_mean": "CompareTrend/Module34/lp_mac_radius",
-            "lp_mac_radius_max": "CompareTrend/Module34/lp_mac_radius_max",
-            "lp_mac_low_clip_ratio": "CompareTrend/Module34/lp_mac_low_clip_ratio",
-            "lp_mac_high_clip_ratio": "CompareTrend/Module34/lp_mac_high_clip_ratio",
-            "lp_stats_update_gate_mean": "CompareTrend/Module34/lp_stats_update_gate",
             "prototype_cos_abs_mean": "CompareTrend/Module34/prototype_cos_mean",
             "prototype_cos_abs_max": "CompareTrend/Module34/prototype_cos_max",
             "prototype_same_class_cos_max": "CompareTrend/Module34/prototype_same_class_cos_max",
@@ -1580,7 +1486,6 @@ Config label: `{config_label}`
             ("m34_supcon_w", loss_parts.get("module34_supcon_weighted_loss", 0.0)),
             ("m34_center_w", loss_parts.get("module34_center_weighted_loss", 0.0)),
             ("m34_branch_ce_w", loss_parts.get("module34_branch_ce_weighted_loss", 0.0)),
-            ("lp_hbr_w", loss_parts.get("lp_hbr_weighted_loss", 0.0)),
             ("site_adv", loss_parts.get("site_adversarial_loss", 0.0)),
             ("pred_base", loss_parts.get("temporal_pred_base_loss", 0.0)),
             ("pred_delta", loss_parts.get("temporal_pred_delta_loss", 0.0)),
@@ -1630,16 +1535,6 @@ Config label: `{config_label}`
             ("pos_prob", loss_parts.get("final_positive_prob_mean", 0.0)),
         ]
         optional_diagnostic_items = [
-            ("lp_constraint", loss_parts.get("lp_lorentz_constraint_error", 0.0)),
-            ("lp_in_norm", loss_parts.get("lp_in_aggregation_norm", 0.0)),
-            ("lp_out_norm", loss_parts.get("lp_out_aggregation_norm", 0.0)),
-            ("lp_alpha_out", loss_parts.get("lp_alpha_out", 0.0)),
-            ("lp_centroid", loss_parts.get("lp_centroid_message_weight", 0.0)),
-            ("lp_mac_radius", loss_parts.get("lp_mac_radius_mean", 0.0)),
-            ("lp_mac_high", loss_parts.get("lp_mac_high_clip_ratio", 0.0)),
-            ("lp_mac_low", loss_parts.get("lp_mac_low_clip_ratio", 0.0)),
-            ("lp_stats_gate", loss_parts.get("lp_stats_update_gate_mean", 0.0)),
-            ("lp_hbr", loss_parts.get("lp_hbr_loss", 0.0)),
             ("hpec_net_std", loss_parts.get("hpec_network_energy_std", 0.0)),
             ("hpec_net_sel_peak", loss_parts.get("hpec_network_selector_peak", 0.0)),
             ("hpec_net_sel_ent", loss_parts.get("hpec_network_selector_entropy", 0.0)),
@@ -2034,7 +1929,6 @@ Config label: `{config_label}`
     def _collect_embeddings_for_tsne(self, loader):
         features = []
         labels = []
-        complementary_features = []
         with torch.no_grad():
             for batch in loader:
                 x_enc, label, correlation_matrix, site_label = self._unpack_batch(batch)
@@ -2050,18 +1944,9 @@ Config label: `{config_label}`
                 )
                 features.append(self._latest_embedding_after_forward(y_hat))
                 labels.append(label.detach().cpu().numpy())
-                model = self._model_for_aux_loss()
-                complementary = getattr(model, "latest_complementary_module3_output", None)
-                if complementary is not None:
-                    complementary_features.append(complementary.z_tangent.detach().cpu().numpy())
         if not features:
-            return None, None, None
-        complementary = (
-            np.concatenate(complementary_features, axis=0)
-            if complementary_features
-            else None
-        )
-        return np.concatenate(features, axis=0), np.concatenate(labels, axis=0), complementary
+            return None, None
+        return np.concatenate(features, axis=0), np.concatenate(labels, axis=0)
 
     def _latest_hpec_prototypes_for_tsne(self):
         model = self._model_for_aux_loss()
@@ -2092,8 +1977,8 @@ Config label: `{config_label}`
         was_training = self.model.training
         model = self._model_for_aux_loss()
         self.model.eval()
-        train_features, train_labels, train_complementary = self._collect_embeddings_for_tsne(train_loader)
-        test_features, test_labels, test_complementary = self._collect_embeddings_for_tsne(val_loader)
+        train_features, train_labels = self._collect_embeddings_for_tsne(train_loader)
+        test_features, test_labels = self._collect_embeddings_for_tsne(val_loader)
         prototype_pack = self._latest_hpec_prototypes_for_tsne()
         if was_training:
             self.model.train()
@@ -2187,59 +2072,6 @@ Config label: `{config_label}`
         if self.args.print_process:
             print(f"train/test t-SNE visualization saved to: {save_path}")
 
-        if train_complementary is None or test_complementary is None:
-            return
-        paired_features = np.concatenate(
-            [train_features, test_features, train_complementary, test_complementary], axis=0
-        )
-        paired_labels = np.concatenate(
-            [train_labels, test_labels, train_labels, test_labels], axis=0
-        ).astype(int)
-        paired_split = np.array(
-            ["train-standard"] * len(train_labels)
-            + ["test-standard"] * len(test_labels)
-            + ["train-complementary"] * len(train_labels)
-            + ["test-complementary"] * len(test_labels)
-        )
-        perplexity = min(30, max(2, (len(paired_features) - 1) // 3))
-        paired_2d = TSNE(
-            n_components=2,
-            perplexity=perplexity,
-            init="pca",
-            learning_rate="auto",
-            random_state=int(getattr(self.args, "seed", 2024)),
-        ).fit_transform(paired_features)
-        fig, ax = plt.subplots(figsize=(7, 6))
-        marker_map = {
-            "train-standard": "o",
-            "test-standard": "^",
-            "train-complementary": "x",
-            "test-complementary": "s",
-        }
-        for split_name, marker in marker_map.items():
-            split_mask = paired_split == split_name
-            for label_value in sorted(np.unique(paired_labels)):
-                point_mask = split_mask & (paired_labels == label_value)
-                if np.any(point_mask):
-                    ax.scatter(
-                        paired_2d[point_mask, 0],
-                        paired_2d[point_mask, 1],
-                        c=[cmap(label_value % 10)],
-                        marker=marker,
-                        label=f"{split_name} label={label_value}",
-                        alpha=0.72,
-                        s=34,
-                    )
-        ax.set_title("t-SNE of standard and complementary embeddings")
-        ax.set_xlabel("t-SNE 1")
-        ax.set_ylabel("t-SNE 2")
-        ax.legend(loc="best", fontsize=7)
-        ax.grid(alpha=0.2)
-        fig.tight_layout()
-        paired_path = os.path.join(output_dir, f"{fold_name}_standard_complementary_tsne.png")
-        fig.savefig(paired_path, bbox_inches="tight")
-        plt.close(fig)
-    
     def val(self, val_loader, criterion):
         total_loss = []
         self.model.eval()
@@ -2335,19 +2167,8 @@ Config label: `{config_label}`
                 "temporal_smooth_loss": [],
                 "temporal_group_sparse_loss": [],
                 "temporal_lag_hierarchy_loss": [],
-                "complementary_view_loss": [],
-                "complementary_view_weighted_loss": [],
-                "complementary_view_distance": [],
-                "complementary_instance_infonce_loss": [],
-                "complementary_instance_infonce_weighted_loss": [],
-                "complementary_masked_ce_loss": [],
-                "complementary_masked_ce_weighted_loss": [],
-                "complementary_mask_ratio": [],
-                "complementary_topology_salience_entropy": [],
-                "complementary_semantic_salience_entropy": [],
                 "hpec_reliable_tp_ratio": [],
                 "hpec_reliable_confidence_mean": [],
-                "hpec_reliable_view_consistency_mean": [],
                 "hpec_reliable_assignment_entropy": [],
                 "hpec_reliable_updated_prototype_count": [],
                 "hpec_reliable_unupdated_prototype_count": [],
@@ -2410,20 +2231,6 @@ Config label: `{config_label}`
                 "module34_center_cos_mean": [],
                 "module34_branch_ce_loss": [],
                 "module34_branch_ce_weighted_loss": [],
-                "lp_lorentz_constraint_error": [],
-                "lp_in_aggregation_norm": [],
-                "lp_out_aggregation_norm": [],
-                "lp_alpha_out": [],
-                "lp_centroid_message_weight": [],
-                "lp_in_attention_temperature": [],
-                "lp_out_attention_temperature": [],
-                "lp_mac_radius_mean": [],
-                "lp_mac_radius_max": [],
-                "lp_mac_low_clip_ratio": [],
-                "lp_mac_high_clip_ratio": [],
-                "lp_stats_update_gate_mean": [],
-                "lp_hbr_loss": [],
-                "lp_hbr_weighted_loss": [],
                 "site_adversarial_loss": [],
                 "site_modulation_reg_loss": [],
                 "site_adversarial_weighted_loss": [],
@@ -2567,10 +2374,6 @@ Config label: `{config_label}`
                     train_branch_storage,
                     self._collect_branch_batch_metrics(metric_label),
                 )
-            epoch_prototype_stats = self._finalize_epoch_prototype_update()
-            for key, value in epoch_prototype_stats.items():
-                if torch.is_tensor(value) and value.numel() == 1:
-                    aux_loss_parts.setdefault(key, []).append(value.detach().cpu().item())
             if len(preds)>0:
                 preds = np.concatenate(preds, axis=0)    
                 targets = np.concatenate(targets, axis=0)   

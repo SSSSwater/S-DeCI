@@ -8,7 +8,7 @@
 
 ### Requirement: 规范范围
 
-本文档覆盖以下内容：
+本规范 SHALL 覆盖以下内容：
 
 - 顶层仓库结构。
 - 实验执行流程。
@@ -24,7 +24,7 @@
 
 ### Requirement: 顶层目录组织
 
-项目应当将源代码、实验入口、OpenSpec 元数据、脚本和文档放置在清晰分离的顶层目录或文件中。
+项目 SHALL 将源代码、实验入口、OpenSpec 元数据、脚本和文档放置在清晰分离的顶层目录或文件中。
 
 #### Scenario: 查看仓库根目录
 
@@ -33,7 +33,7 @@
 
 ### Requirement: 实验入口
 
-系统应当使用 `run_cv.py` 作为配置和运行交叉验证实验的主入口。
+系统 SHALL 使用 `run_cv.py` 作为配置和运行交叉验证实验的主入口。
 
 #### Scenario: DeCI 脚本启动训练
 
@@ -44,7 +44,7 @@
 
 ### Requirement: 实验生命周期
 
-实验层应当负责模型构建、设备选择、数据获取、训练、验证、checkpoint 管理和指标汇报。
+实验层 SHALL 负责模型构建、设备选择、数据获取、训练、验证、checkpoint 管理和指标汇报。
 
 #### Scenario: 创建实验对象
 
@@ -68,7 +68,7 @@
 
 ### Requirement: 数据集加载器职责
 
-`data_provider/data_loader_CV.py` 中的数据集类应当根据不同数据集的目录结构加载预处理后的 fMRI 样本和标签。
+`data_provider/data_loader_CV.py` 中的数据集类 SHALL 根据不同数据集的目录结构加载预处理后的 fMRI 样本和标签。
 
 #### Scenario: 数据集类加载样本
 
@@ -79,7 +79,7 @@
 
 ### Requirement: 交叉验证 dataloader 构建
 
-`data_provider/data_factory_CV.py` 应当创建分层 k 折训练和验证 dataloader。
+`data_provider/data_factory_CV.py` SHALL 创建分层 k 折训练和验证 dataloader。
 
 #### Scenario: 调用数据提供函数
 
@@ -117,7 +117,7 @@
 
 ### Requirement: DeCI 是项目提出的主模型
 
-项目应当将 `models/DeCI.py` 和 `layers/DeCI_Layer.py` 视为实际设计的模型实现。
+项目 SHALL 将 `models/DeCI.py` 和 `layers/DeCI_Layer.py` 视为实际设计的模型实现。
 
 #### Scenario: 定位主模型实现
 
@@ -127,7 +127,7 @@
 
 ### Requirement: 其他模型作为对照基线
 
-除 `models/DeCI.py` 以外的模型文件，以及除 DeCI 专用层实现以外的层文件，应当被视为性能对照基线，除非它们被 DeCI 直接引用。
+除 `models/DeCI.py` 以外的模型文件，以及除 DeCI 专用层实现以外的层文件，SHALL 被视为性能对照基线，除非它们被 DeCI 直接引用。
 
 #### Scenario: 查看基线模型
 
@@ -137,7 +137,7 @@
 
 ### Requirement: 脚本目录反映实验家族
 
-`scripts/` 目录应当按照模型家族或对照类别组织复现实验命令。
+`scripts/` 目录 SHALL 按照模型家族或对照类别组织复现实验命令。
 
 #### Scenario: 使用批量启动器运行主模型
 
@@ -151,7 +151,7 @@
 
 ### Requirement: 训练日志
 
-实验脚本应当将运行输出重定向到 `logs/<dataset>/<model>/` 风格的目录中。
+实验脚本 SHALL 将运行输出重定向到 `logs/<dataset>/<model>/` 风格的目录中。
 
 #### Scenario: DeCI 数据集脚本运行
 
@@ -162,7 +162,7 @@
 
 ### Requirement: 结果提取
 
-`extract_re.py` 应当从 `logs/` 树中汇总最佳日志指标。
+`extract_re.py` SHALL 从 `logs/` 树中汇总最佳日志指标。
 
 #### Scenario: 实验完成后运行结果提取
 
@@ -173,7 +173,7 @@
 
 ### Requirement: OpenSpec 配置
 
-项目应当将 OpenSpec 工作流配置保存在 `openspec/` 下。
+项目 SHALL 将 OpenSpec 工作流配置保存在 `openspec/` 下。
 
 #### Scenario: 检查 OpenSpec 状态
 
@@ -182,7 +182,7 @@
 
 ### Requirement: 文档位置
 
-项目级 Markdown 文档应当放在 `docs/` 下。
+项目级 Markdown 文档 SHALL 放在 `docs/` 下。
 
 #### Scenario: 读者查找结构文档
 

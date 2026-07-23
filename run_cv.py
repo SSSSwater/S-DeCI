@@ -136,19 +136,7 @@ def normalize_s_deci_module_args(args):
         "hgcn_fc_inject_weight": 0.0,
         "hgcn_fc_anchor_norm_target": 0.5,
         "hgcn_fc_anchor_gate_init": -1.5,
-        "lorentz_layers": 1,
-        "lorentz_curvature": 1.0,
-        "lorentz_dropout": 0.0,
-        "lorentz_alpha_out_init": 0.5,
-        "lorentz_max_tangent_norm": 1.0,
-        "lp_use_network_readout": 1,
-        "lp_network_readout_blend": 0.75,
-        "lp_mac_clip_mode": "soft",
         "module34_geo_dtype": "auto",
-        "mac_min_radius": 0.05,
-        "mac_max_radius": 0.98,
-        "hbr_safe_radius": 2.0,
-        "hbr_loss_weight": 0.0,
         "keep_gcn_fallback_with_hyperbolic": 0,
         "hyperbolic_logit_residual_weight": 0.0,
         "hpec_teacher_distill_weight": 0.0,
@@ -400,16 +388,6 @@ if __name__ == '__main__':
                         help='当 S-DeCI 关闭模块 2 但启用模块 3 时，是否加载每个样本对应的相关系数矩阵作为 HGCN adjacency')
     parser.add_argument('--sample_correlation_mode', type=str, default='abs',
                         choices=['abs', 'positive', 'raw'], help='样本相关矩阵作为图结构时的负值处理方式：abs 取绝对值，positive 仅保留正相关，raw 保留原值')
-    parser.add_argument('--lorentz_layers', type=int, default=1,
-                        help='LP-Brain-HPEC 中 Directed Lorentz GCN 的层数')
-    parser.add_argument('--lorentz_curvature', type=float, default=1.0,
-                        help='LP-Brain-HPEC Lorentz/Poincare 使用的曲率参数')
-    parser.add_argument('--lorentz_dropout', type=float, default=0.0,
-                        help='LP-Brain-HPEC Lorentz 切空间更新中的 dropout 比例')
-    parser.add_argument('--lorentz_alpha_out_init', type=float, default=0.5,
-                        help='LP-Brain-HPEC 出边聚合初始权重，0.5 表示入边和出边起步近似均衡')
-    parser.add_argument('--lorentz_max_tangent_norm', type=float, default=1.0,
-                        help='LP-Brain-HPEC Lorentz tangent 向量最大范数，用于防止流形越界')
     parser.add_argument('--module34_geo_dtype', type=str, default='auto',
                         choices=['auto', 'float32', 'float64'],
                         help='模块 3/4 几何计算精度；auto 保持训练速度，float64 更稳但更慢')
@@ -488,18 +466,12 @@ if __name__ == '__main__':
     parser.add_argument('--hpec_data_init', type=int, default=0,
                         help='是否用首个训练 batch 的类别中心 warm-start HPEC prototype')
     parser.add_argument('--hpec_prototype_update_mode', type=str, default='reliable_tp_ema',
-                        choices=['reliable_tp_ema', 'epoch_reliable_frechet_ema', 'sinkhorn_ema', 'none'],
-                        help='HPEC原型更新：epoch_reliable_frechet_ema按完整epoch执行独立流形EMA')
+                        choices=['reliable_tp_ema', 'sinkhorn_ema', 'none'],
+                        help='HPEC原型更新：可靠TP EMA、Sinkhorn legacy对照或冻结')
     parser.add_argument('--hpec_reliable_confidence_threshold', type=float, default=0.70,
                         help='可靠TP原型更新的真实类别最小预测概率')
-    parser.add_argument('--hpec_reliable_view_consistency_threshold', type=float, default=0.55,
-                        help='互补视图启用时可靠TP所需的最小切空间余弦一致性')
     parser.add_argument('--hpec_reliable_min_samples', type=int, default=2,
                         help='一个类内prototype执行可靠EMA所需的最少TP样本数')
-    parser.add_argument('--hpec_reliable_weight_floor', type=float, default=0.05,
-                        help='epoch流形EMA中低置信样本的最小连续权重')
-    parser.add_argument('--hpec_epoch_frechet_steps', type=int, default=3,
-                        help='epoch原型目标中心的Karcher迭代次数')
     parser.add_argument('--hpec_ema_alpha', type=float, default=0.995,
                         help='HPEC prototype EMA 更新的历史保留系数')
     parser.add_argument('--hpec_ema_anchor_weight', type=float, default=0.15,
@@ -519,15 +491,6 @@ if __name__ == '__main__':
                         help='HPEC hyperspherical separation prototype 初始化步数')
     parser.add_argument('--hpec_eps', type=float, default=1e-7,
                         help='HPEC 角度、孔径和除法计算中的数值稳定 eps')
-    parser.add_argument('--mac_min_radius', type=float, default=0.05,
-                        help='LP-Brain-HPEC MAC 安全环带最小 Poincare 半径，低于该值会沿方向外推')
-    parser.add_argument('--mac_max_radius', type=float, default=0.98,
-                        help='LP-Brain-HPEC MAC 安全环带最大 Poincare 半径，高于该值会拉回球内')
-    parser.add_argument('--hbr_safe_radius', type=float, default=2.0,
-                        help='LP-Brain-HPEC HBR 的安全双曲半径，超过后产生软惩罚')
-    parser.add_argument('--hbr_loss_weight', type=float, default=0.0,
-                        help='LP-Brain-HPEC HBR 半径惩罚权重；0 表示只记录诊断不参与 loss')
-
     # ==================== S-DeCI GCN fallback ====================
     parser = root_parser.add_argument_group('==================== S-DeCI GCN fallback ====================')
     parser.add_argument('--gcn_fallback_hidden_dim', type=int, default=64,

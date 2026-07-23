@@ -212,10 +212,7 @@ class HPECPrototypeEnergy(nn.Module):
         use_sinkhorn_ema=False,
         prototype_update_mode="reliable_tp_ema",
         reliable_confidence_threshold=0.70,
-        reliable_view_consistency_threshold=0.55,
         reliable_min_samples=2,
-        reliable_weight_floor=0.05,
-        epoch_frechet_steps=3,
         sinkhorn_epsilon=0.05,
         sinkhorn_iters=3,
         ema_alpha=0.9,
@@ -250,23 +247,17 @@ class HPECPrototypeEnergy(nn.Module):
         self.prototype_update_mode = str(prototype_update_mode or "reliable_tp_ema").lower()
         if self.prototype_update_mode not in (
             "reliable_tp_ema",
-            "epoch_reliable_frechet_ema",
             "sinkhorn_ema",
             "none",
         ):
             raise ValueError(
                 "prototype_update_mode must be 'reliable_tp_ema', "
-                "'epoch_reliable_frechet_ema', 'sinkhorn_ema' or 'none'."
+                "'sinkhorn_ema' or 'none'."
             )
         self.reliable_confidence_threshold = min(
             max(float(reliable_confidence_threshold), 0.0), 1.0
         )
-        self.reliable_view_consistency_threshold = min(
-            max(float(reliable_view_consistency_threshold), -1.0), 1.0
-        )
         self.reliable_min_samples = max(int(reliable_min_samples), 1)
-        self.reliable_weight_floor = min(max(float(reliable_weight_floor), 0.0), 1.0)
-        self.epoch_frechet_steps = max(int(epoch_frechet_steps), 1)
         self.sinkhorn_epsilon = float(sinkhorn_epsilon)
         self.sinkhorn_iters = int(sinkhorn_iters)
         self.ema_alpha = float(ema_alpha)
@@ -309,7 +300,6 @@ class HPECPrototypeEnergy(nn.Module):
         self.busemann_class_bias = nn.Parameter(torch.zeros(self.num_classes))
         self.latest_sinkhorn_stats = {}
         self.latest_prototype_update_stats = {}
-        self._epoch_prototype_queue = []
 
     def _direction_prototypes(self, dtype=None):
         direction = F.normalize(self.prototype_tangent_direction, p=2, dim=-1)
@@ -380,7 +370,6 @@ class HPECPrototypeEnergy(nn.Module):
         if self.prototype_update_mode in (
             "sinkhorn_ema",
             "reliable_tp_ema",
-            "epoch_reliable_frechet_ema",
         ) and self.prototypes_per_class > 1:
             # 多原型 EMA 依赖初始原型的方向差异；首个 batch 的类中心 warm-start
             # 容易把同类多个 prototype 先压到一处，削弱 Sinkhorn 的均衡分配效果。
@@ -451,7 +440,6 @@ class HPECPrototypeEnergy(nn.Module):
         z_global,
         labels,
         logits,
-        companion_z_global=None,
         energy_per_proto=None,
     ):
         """用可靠 TP 训练样本独立 EMA 移动多 prototype，不参与 autograd。"""
@@ -473,17 +461,6 @@ class HPECPrototypeEnergy(nn.Module):
             prediction = probability.argmax(dim=-1)
             confidence = probability.gather(1, label_index[:, None]).squeeze(1)
             reliable = (prediction == label_index) & (confidence >= self.reliable_confidence_threshold)
-
-            if companion_z_global is None:
-                consistency = torch.ones_like(confidence)
-            else:
-                companion = self.manifold.projx(companion_z_global.detach(), dim=-1)
-                companion_tangent = self.manifold.logmap0(companion, dim=-1)
-                consistency = (
-                    1.0
-                    + F.cosine_similarity(z_tangent, companion_tangent, dim=-1, eps=self.eps)
-                ) / 2.0
-                reliable = reliable & (consistency >= self.reliable_view_consistency_threshold)
 
             current_prototypes = self._current_prototypes(dtype=z_global.dtype).detach()
             prototype_tangent = self.manifold.logmap0(
@@ -524,9 +501,7 @@ class HPECPrototypeEnergy(nn.Module):
                     if int(count.item()) < self.reliable_min_samples:
                         continue
                     selected_indices = torch.where(class_mask)[0][winner_mask]
-                    weights = consistency[selected_indices].clamp_min(self.eps)
-                    center = (weights[:, None] * z_tangent[selected_indices]).sum(dim=0)
-                    center = center / weights.sum().clamp_min(self.eps)
+                    center = z_tangent[selected_indices].mean(dim=0)
                     center_norm = center.norm().clamp_min(self.eps)
                     lower, upper = self._prototype_radius_bounds(center.view(1, -1))
                     center = center / center_norm * center_norm.clamp(min=lower.item(), max=upper.item())
@@ -554,7 +529,6 @@ class HPECPrototypeEnergy(nn.Module):
             stats = {
                 "hpec_reliable_tp_ratio": reliable.to(z_global.dtype).mean(),
                 "hpec_reliable_confidence_mean": confidence.mean(),
-                "hpec_reliable_view_consistency_mean": consistency.mean(),
                 "hpec_reliable_class_count_min": class_reliable_counts.min(),
                 "hpec_reliable_class_count_max": class_reliable_counts.max(),
                 "hpec_reliable_assignment_entropy": assignment_entropy / normalizer.clamp_min(self.eps),
@@ -565,217 +539,6 @@ class HPECPrototypeEnergy(nn.Module):
                 "hpec_reliable_ema_displacement_mean": movement[updated_mask].mean()
                 if torch.any(updated_mask)
                 else zero,
-            }
-            self.latest_prototype_update_stats = stats
-            return stats
-
-    def clear_epoch_prototype_queue(self):
-        """清空 epoch 级 prototype 样本缓存，不改变 prototype 本身。"""
-
-        self._epoch_prototype_queue = []
-
-    def queue_epoch_prototype_samples(
-        self,
-        z_global,
-        labels,
-        logits,
-        companion_z_global=None,
-    ):
-        """缓存训练样本，供 epoch 结束后独立更新 prototype。
-
-        可靠度使用连续权重而不是 TP 硬门控，避免早期误分类样本永远无法修正原型。
-        缓存张量转移到 CPU，既不保留 autograd 图，也不长期占用显存。
-        """
-
-        if self.prototype_update_mode != "epoch_reliable_frechet_ema":
-            return {}
-        label_index = _as_label_index(labels)
-        if z_global.shape[0] != label_index.shape[0] or logits.shape[0] != label_index.shape[0]:
-            return {}
-
-        with torch.no_grad():
-            points = self.manifold.projx(z_global.detach(), dim=-1)
-            if logits.ndim == 1 or logits.shape[-1] == 1:
-                positive_probability = torch.sigmoid(logits.detach().reshape(-1))
-                probability = torch.stack([1.0 - positive_probability, positive_probability], dim=-1)
-            else:
-                probability = torch.softmax(logits.detach(), dim=-1)
-            confidence = probability.gather(1, label_index[:, None]).squeeze(1)
-
-            if companion_z_global is None:
-                consistency = torch.ones_like(confidence)
-            else:
-                companion = self.manifold.projx(companion_z_global.detach(), dim=-1)
-                tangent = self.manifold.logmap0(points, dim=-1)
-                companion_tangent = self.manifold.logmap0(companion, dim=-1)
-                consistency = (
-                    1.0
-                    + F.cosine_similarity(tangent, companion_tangent, dim=-1, eps=self.eps)
-                ) / 2.0
-
-            threshold_scale = max(1.0 - self.reliable_confidence_threshold, 0.05)
-            confidence_gate = torch.sigmoid(
-                (confidence - self.reliable_confidence_threshold) / threshold_scale
-            )
-            reliability = self.reliable_weight_floor + (
-                1.0 - self.reliable_weight_floor
-            ) * confidence_gate * consistency.clamp(0.0, 1.0)
-            self._epoch_prototype_queue.append(
-                (
-                    points.to(device="cpu", dtype=torch.float32),
-                    label_index.detach().to(device="cpu"),
-                    reliability.to(device="cpu", dtype=torch.float32),
-                    confidence.to(device="cpu", dtype=torch.float32),
-                    consistency.to(device="cpu", dtype=torch.float32),
-                )
-            )
-            queued = sum(item[0].shape[0] for item in self._epoch_prototype_queue)
-            return {
-                "hpec_epoch_queue_size": torch.as_tensor(
-                    float(queued), device=z_global.device, dtype=z_global.dtype
-                ),
-                "hpec_epoch_reliability_mean": reliability.mean(),
-            }
-
-    def _weighted_frechet_mean(self, points, weights, initial):
-        """在 Poincare Ball 上执行少量 Karcher 迭代。"""
-
-        mean = self.manifold.projx(initial.detach(), dim=-1)
-        weights = weights.to(device=points.device, dtype=points.dtype).clamp_min(self.eps)
-        weights = weights / weights.sum().clamp_min(self.eps)
-        for _ in range(self.epoch_frechet_steps):
-            base = mean.unsqueeze(0).expand_as(points)
-            tangent = self.manifold.logmap(base, points, dim=-1)
-            update = (weights[:, None] * tangent).sum(dim=0)
-            mean = self.manifold.expmap(mean, update, dim=-1, project=True)
-            mean = self.manifold.projx(mean, dim=-1)
-        return mean
-
-    def finalize_epoch_prototype_update(self):
-        """用整个训练 epoch 的样本执行流形 soft-assignment EMA。"""
-
-        if self.prototype_update_mode != "epoch_reliable_frechet_ema":
-            return {}
-        if not self._epoch_prototype_queue:
-            return {}
-
-        with torch.no_grad():
-            device = self.prototypes.device
-            dtype = self.prototypes.dtype
-            points = torch.cat([item[0] for item in self._epoch_prototype_queue], dim=0).to(
-                device=device, dtype=dtype
-            )
-            labels = torch.cat([item[1] for item in self._epoch_prototype_queue], dim=0).to(device)
-            reliability = torch.cat([item[2] for item in self._epoch_prototype_queue], dim=0).to(
-                device=device, dtype=dtype
-            )
-            confidence = torch.cat([item[3] for item in self._epoch_prototype_queue], dim=0).to(
-                device=device, dtype=dtype
-            )
-            consistency = torch.cat([item[4] for item in self._epoch_prototype_queue], dim=0).to(
-                device=device, dtype=dtype
-            )
-            self.clear_epoch_prototype_queue()
-
-            current = self._current_prototypes(dtype=dtype).detach()
-            updated = current.clone()
-            anchor = self.manifold.expmap0(
-                self.prototype_anchor_tangent.to(device=device, dtype=dtype),
-                dim=-1,
-                project=True,
-            )
-            alpha = min(max(float(self.ema_alpha), 0.0), 0.9999)
-            anchor_weight = min(max(float(self.ema_anchor_weight), 0.0), 1.0)
-            occupancy = torch.zeros(
-                self.num_classes,
-                self.prototypes_per_class,
-                device=device,
-                dtype=dtype,
-            )
-            movement = torch.zeros_like(occupancy)
-            updated_mask = torch.zeros_like(occupancy, dtype=torch.bool)
-
-            all_energy = self(points).energy_per_proto.detach()
-            temperature = max(float(self.proto_temperature), 1e-4)
-            for class_idx in range(self.num_classes):
-                class_mask = labels == class_idx
-                if int(class_mask.sum().item()) < self.reliable_min_samples:
-                    continue
-                class_points = points[class_mask]
-                class_reliability = reliability[class_mask]
-                assignment = torch.softmax(
-                    -all_energy[class_mask, class_idx, :] / temperature,
-                    dim=-1,
-                )
-                weighted_assignment = assignment * class_reliability[:, None]
-                occupancy[class_idx] = weighted_assignment.sum(dim=0)
-
-                for prototype_idx in range(self.prototypes_per_class):
-                    weights = weighted_assignment[:, prototype_idx]
-                    if weights.sum() < self.eps:
-                        continue
-                    target = self._weighted_frechet_mean(
-                        class_points,
-                        weights,
-                        current[class_idx, prototype_idx],
-                    )
-                    if anchor_weight > 0:
-                        to_anchor = self.manifold.logmap(
-                            target,
-                            anchor[class_idx, prototype_idx],
-                            dim=-1,
-                        )
-                        target = self.manifold.expmap(
-                            target,
-                            anchor_weight * to_anchor,
-                            dim=-1,
-                            project=True,
-                        )
-                    direction = self.manifold.logmap(
-                        current[class_idx, prototype_idx],
-                        target,
-                        dim=-1,
-                    )
-                    candidate = self.manifold.expmap(
-                        current[class_idx, prototype_idx],
-                        (1.0 - alpha) * direction,
-                        dim=-1,
-                        project=True,
-                    )
-                    updated[class_idx, prototype_idx] = self.manifold.projx(candidate, dim=-1)
-                    movement[class_idx, prototype_idx] = self.manifold.dist(
-                        current[class_idx, prototype_idx],
-                        updated[class_idx, prototype_idx],
-                        dim=-1,
-                    )
-                    updated_mask[class_idx, prototype_idx] = True
-
-            updated_tangent = self.manifold.logmap0(updated, dim=-1)
-            self._copy_prototypes_from_tangent(updated_tangent)
-            occupancy_prob = occupancy / occupancy.sum(dim=-1, keepdim=True).clamp_min(self.eps)
-            occupancy_entropy = -(
-                occupancy_prob.clamp_min(self.eps) * occupancy_prob.clamp_min(self.eps).log()
-            ).sum(dim=-1)
-            entropy_norm = torch.log(
-                torch.as_tensor(
-                    float(max(self.prototypes_per_class, 2)),
-                    device=device,
-                    dtype=dtype,
-                )
-            )
-            stats = {
-                "hpec_epoch_sample_count": torch.as_tensor(float(points.shape[0]), device=device, dtype=dtype),
-                "hpec_epoch_confidence_mean": confidence.mean(),
-                "hpec_epoch_consistency_mean": consistency.mean(),
-                "hpec_epoch_reliability_mean": reliability.mean(),
-                "hpec_epoch_occupancy_min": occupancy.min(),
-                "hpec_epoch_occupancy_max": occupancy.max(),
-                "hpec_epoch_occupancy_entropy": (occupancy_entropy / entropy_norm.clamp_min(self.eps)).mean(),
-                "hpec_epoch_updated_prototype_count": updated_mask.to(dtype).sum(),
-                "hpec_epoch_prototype_movement_mean": movement[updated_mask].mean()
-                if torch.any(updated_mask)
-                else movement.sum() * 0.0,
-                "hpec_epoch_prototype_movement_max": movement.max(),
             }
             self.latest_prototype_update_stats = stats
             return stats

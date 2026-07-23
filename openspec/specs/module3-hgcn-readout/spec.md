@@ -2,9 +2,9 @@
 
 定义 `S-DeCI` 模块 3 的 HGCN 双曲 readout 能力：将模块 1 的 Cycle/seasonal feature `C` 与图结构结合，得到节点级双曲表示 `H_gcn` 和全脑中心点 `z_global`。图结构可以来自模块 2 学到的因果邻接矩阵 `A_learned`，也可以在模块 2 关闭时来自样本级相关系数矩阵。模块 3 输出可供线性分类回退路径或模块 4 HPEC 原型能量分类使用。
 ## Requirements
-### Requirement: 模块 3 可选支持 LP-Brain-HPEC Lorentz 有向 readout 实验对照
+### Requirement: 模块 3 的 LP-Brain-HPEC 历史实验边界
 
-模块 3 MAY 支持 `module34_arch == "lp_brain_hpec"` 路径作为 experimental/消融对照，将模块 1 节点特征提升到 Lorentz manifold，并使用模块 2 的有向因果图执行入边/出边分离的 Lorentz 图卷积。默认主路线 MUST 使用 `module34_arch == "hgcn_hpec"` 和 `hgcn_readout_mode == "mean_std"`，因为当前完整测试中该路径更快、更稳定，且不会引入 Lorentz-to-Poincare bridge 的额外数值敏感性；`node_stats` 中的坐标级 max 仅保留为消融入口。
+模块 3 的 LP-Brain-HPEC Lorentz 有向 readout 已完成实验并退出当前代码。下列公式仅记录历史候选设计和失败诊断，不构成当前可执行 `module34_arch` 能力。默认主路线 MUST 使用 Poincare HGCN 和 `hgcn_readout_mode == "mean_std"`，因为完整测试中该路径更快、更稳定，且不会引入 Lorentz-to-Poincare bridge 的额外数值敏感性。
 
 #### Scenario: Lorentz lifting 输入输出形状
 - **GIVEN** 节点特征 `node_features` 的形状为 `[B, N, d_in]`
@@ -112,9 +112,9 @@ $$
 - **AND** 系统 MUST 对 `[B, N, N]` 图逐样本使用对应 adjacency
 - **AND** 输出节点 Lorentz 表示形状 MUST 为 `[B, N, D + 1]`
 
-### Requirement: 模块 3 可选提供 Lorentz tangent readout 实验对照
+### Requirement: 模块 3 的 Lorentz tangent readout 历史记录
 
-当且仅当用户显式启用 `module34_arch == "lp_brain_hpec"` 时，模块 3 MAY 使用 Lorentz 原点切空间 readout 生成图级 Lorentz embedding，并缓存可用于 t-SNE 与诊断的切空间表示。该路径不属于默认主路线；默认主路线仍使用 Poincare HGCN 的 `mean_std` readout 得到 `z_global`。
+该 Lorentz 原点切空间 readout 只记录已完成 LP-Brain-HPEC 实验的计算契约，不属于当前可执行能力。默认主路线 SHALL 使用 Poincare HGCN 的 `mean_std` readout 得到 `z_global`。
 
 #### Scenario: 切空间均值 readout
 - **GIVEN** 最后一层 Lorentz 节点表示形状为 `[B, N, D + 1]`
@@ -214,9 +214,9 @@ $$
 
 - **AND** 文档 MUST 说明这些量只用于 TensorBoard 或控制台诊断，不参与默认训练 loss；设计原因是判断 Lorentz 实验路径是否发生流形约束漂移或出入边消息失衡
 
-### Requirement: 模块 3 可选 Lorentz 几何 dtype 配置
+### Requirement: 模块 3 的 Lorentz 几何 dtype 历史记录
 
-当使用 `lp_brain_hpec` 实验路径时，模块 3 MAY 支持配置关键 Lorentz 几何计算 dtype，避免将完整训练强制为 `float64`。默认 `hgcn_hpec` 主路线不依赖该配置。
+`module34_geo_dtype` 只记录已退役 LP 实验的数值策略，当前 HGCN-HPEC 主路线 SHALL 不依赖该配置。
 
 #### Scenario: 使用 auto 几何 dtype
 - **GIVEN** `module34_geo_dtype == "auto"`
@@ -641,7 +641,7 @@ $$
 
 ### Requirement: 模块 3 可选因果子网络 readout
 
-模块 3 MAY 支持 `causal_subnetwork` readout 作为消融或论文补充实验，用于根据模块 2 因果图抽取若干重要 ROI 子网络并影响 `z_global`。该路径不应替代默认 `mean_std` 主路线。
+模块 3 SHALL 保持默认 `mean_std` 主路线，并 MAY 支持 `causal_subnetwork` readout 作为消融或论文补充实验，用于根据模块 2 因果图抽取若干重要 ROI 子网络并影响 `z_global`。
 
 #### Scenario: 计算因果子网络摘要
 
@@ -679,13 +679,13 @@ $$
 - **AND** MUST 说明它的设计原因是让模块 2 学到的重要有向边能在模块 3 readout 中被观察和消融
 - **AND** MUST 说明它训练更慢，默认主路线仍使用 `mean_std`
 
-### Requirement: 模块 3 支持可选多阶因果输入与互补传播
+### Requirement: 模块 3 支持可选多阶因果输入编码
 
-模块 3 SHALL 可选接收多阶因果可达性增强后的节点特征，并能以共享参数运行标准和训练期互补节点特征视图。
+模块 3 SHALL 可选接收多阶因果可达性增强后的节点特征；当前正式训练只运行标准节点特征视图。
 
 #### Scenario: 保持默认 readout 兼容
-- **GIVEN** 多阶编码或互补视图被启用
+- **GIVEN** 多阶编码被启用
 - **WHEN** 模块 3 执行 HGCN
 - **THEN** 默认 `mean_std` readout MUST 保持可用
-- **AND** 推理期 MUST 只运行标准视图
+- **AND** 训练、验证与推理 MUST 只运行标准视图
 

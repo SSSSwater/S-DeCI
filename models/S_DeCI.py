@@ -323,7 +323,6 @@ class Model(nn.Module):
         self.use_fc_residual_gate = bool(getattr(configs, "use_fc_residual_gate", 0))
         self.fc_residual_gate_init = float(getattr(configs, "fc_residual_gate_init", -2.0))
         self.current_epoch = 0
-        self.collect_complementary_visualization = False
         self.hpec_use_sinkhorn_ema = bool(getattr(configs, "hpec_use_sinkhorn_ema", 1))
         default_prototype_update_mode = "reliable_tp_ema" if self.use_hpec_module4 else "none"
         self.hpec_prototype_update_mode = str(
@@ -331,29 +330,18 @@ class Model(nn.Module):
         ).lower()
         if self.hpec_prototype_update_mode not in (
             "reliable_tp_ema",
-            "epoch_reliable_frechet_ema",
             "sinkhorn_ema",
             "none",
         ):
             raise ValueError(
                 "hpec_prototype_update_mode must be 'reliable_tp_ema', "
-                "'epoch_reliable_frechet_ema', 'sinkhorn_ema' or 'none'."
+                "'sinkhorn_ema' or 'none'."
             )
         self.hpec_reliable_confidence_threshold = float(
             getattr(configs, "hpec_reliable_confidence_threshold", 0.70)
         )
-        self.hpec_reliable_view_consistency_threshold = float(
-            getattr(configs, "hpec_reliable_view_consistency_threshold", 0.55)
-        )
         self.hpec_reliable_min_samples = max(
             int(getattr(configs, "hpec_reliable_min_samples", 2)), 1
-        )
-        self.hpec_reliable_weight_floor = min(
-            max(float(getattr(configs, "hpec_reliable_weight_floor", 0.05)), 0.0),
-            1.0,
-        )
-        self.hpec_epoch_frechet_steps = max(
-            int(getattr(configs, "hpec_epoch_frechet_steps", 3)), 1
         )
         self.hpec_sinkhorn_epsilon = float(getattr(configs, "hpec_sinkhorn_epsilon", 0.05))
         self.hpec_sinkhorn_iters = int(getattr(configs, "hpec_sinkhorn_iters", 3))
@@ -632,10 +620,7 @@ class Model(nn.Module):
                 use_sinkhorn_ema=self.hpec_use_sinkhorn_ema,
                 prototype_update_mode=self.hpec_prototype_update_mode,
                 reliable_confidence_threshold=self.hpec_reliable_confidence_threshold,
-                reliable_view_consistency_threshold=self.hpec_reliable_view_consistency_threshold,
                 reliable_min_samples=self.hpec_reliable_min_samples,
-                reliable_weight_floor=self.hpec_reliable_weight_floor,
-                epoch_frechet_steps=self.hpec_epoch_frechet_steps,
                 sinkhorn_epsilon=self.hpec_sinkhorn_epsilon,
                 sinkhorn_iters=self.hpec_sinkhorn_iters,
                 ema_alpha=self.hpec_ema_alpha,
@@ -794,11 +779,6 @@ class Model(nn.Module):
         # 模块 3 FC 注入：把已证明的 FC 生物标志 embedding 投影后加到 z_tangent。
         # 治"模块3看不到FC"这一掉点主因——让 hgcn_classifier/HPEC 直接吃到 FC 边信号。
         # 默认权重 0（不影响现有 gcn_fallback 入口），仅在开启 3/4 的对照实验里启用。
-        # FC 注入对 LP-Brain-HPEC 同样适用：其 manifold 是 geoopt.PoincareBall，
-        # z_tangent=logmap0(poincare_mac)，注入后按同一 manifold 重投影即可。
-        # 之前对 LP 强制置 0 正是 LP 掉点（raw acc 0.578/AUC 0.588）的主因——
-        # LP 路把判别力最强的 FC 生物标志彻底挡在分类器之外，只剩被多重双曲往返
-        # 扭曲的弱 ALFF。这里改为遵循配置，让 LP 也能直送 FC。
         self.hgcn_fc_inject_weight = float(getattr(configs, "hgcn_fc_inject_weight", 0.0))
         self.hgcn_fc_anchor_norm_target = float(getattr(configs, "hgcn_fc_anchor_norm_target", 0.5))
         self.hgcn_fc_anchor_gate_init = float(getattr(configs, "hgcn_fc_anchor_gate_init", -1.5))
@@ -891,12 +871,6 @@ class Model(nn.Module):
         self.latest_causal_output = None
         self.latest_module3_output = None
         self.latest_module4_output = None
-        self.latest_complementary_module3_output = None
-        self.latest_complementary_module4_output = None
-        self.latest_complementary_mask = None
-        self.latest_complementary_salience = None
-        self.latest_complementary_view_loss = None
-        self.latest_reliable_prototype_update_inputs = None
         self.latest_gcn_fallback_output = None
         self.latest_primary_loss = None
         self.latest_site_adversarial_loss = None
@@ -1047,11 +1021,6 @@ class Model(nn.Module):
         self.current_epoch = int(epoch)
         if self.causal_learner is not None and hasattr(self.causal_learner, "set_epoch"):
             self.causal_learner.set_epoch(epoch)
-        if self.hpec_prototype_update_mode == "epoch_reliable_frechet_ema":
-            if self.hpec_module4 is not None:
-                self.hpec_module4.clear_epoch_prototype_queue()
-            for role_module in self.hpec_role_modules:
-                role_module.clear_epoch_prototype_queue()
 
     def _scheduled_weight(self, base_weight, warmup_epochs):
         if self.causal_loss_schedule == "constant" or warmup_epochs <= 0:
@@ -2346,8 +2315,7 @@ class Model(nn.Module):
         if (
             not self.training
             or self.hpec_module4 is None
-            or self.hpec_prototype_update_mode
-            not in ("reliable_tp_ema", "epoch_reliable_frechet_ema")
+            or self.hpec_prototype_update_mode != "reliable_tp_ema"
             or self.latest_module3_output is None
             or self.latest_module4_output is None
             or self.latest_prediction_logits is None
@@ -2359,67 +2327,15 @@ class Model(nn.Module):
         )
         if not should_update:
             return {}
-        companion = (
-            self.latest_complementary_module3_output.z_global
-            if self.latest_complementary_module3_output is not None
-            else None
-        )
-        if self.hpec_prototype_update_mode == "epoch_reliable_frechet_ema":
-            stats = self.hpec_module4.queue_epoch_prototype_samples(
-                self.latest_module3_output.z_global,
-                labels,
-                self.latest_prediction_logits,
-                companion_z_global=companion,
-            )
-            role_points = getattr(self.latest_module3_output, "causal_role_poincare", None)
-            companion_role_points = getattr(
-                self.latest_complementary_module3_output,
-                "causal_role_poincare",
-                None,
-            )
-            if role_points is not None and len(self.hpec_role_modules) == role_points.shape[1]:
-                for role_idx, role_module in enumerate(self.hpec_role_modules):
-                    role_companion = (
-                        companion_role_points[:, role_idx, :]
-                        if companion_role_points is not None
-                        else None
-                    )
-                    role_stats = role_module.queue_epoch_prototype_samples(
-                        role_points[:, role_idx, :],
-                        labels,
-                        self.latest_prediction_logits,
-                        companion_z_global=role_companion,
-                    )
-                    for key, value in role_stats.items():
-                        stats[f"role_{role_idx}_{key}"] = value
-            if stats:
-                self.latest_aux_losses.update(stats)
-            return stats
         stats = self.hpec_module4.update_prototypes_with_reliable_tp_ema(
             self.latest_module3_output.z_global,
             labels,
             self.latest_prediction_logits,
-            companion_z_global=companion,
             energy_per_proto=self.latest_module4_output.energy_per_proto,
         )
         if stats:
             self.latest_aux_losses.update(stats)
         return stats
-
-    def finalize_epoch_prototype_update(self):
-        """epoch 结束后一次性执行流形 prototype EMA，不参与 autograd。"""
-
-        if self.hpec_prototype_update_mode != "epoch_reliable_frechet_ema":
-            return {}
-        stats = self.hpec_module4.finalize_epoch_prototype_update()
-        combined_stats = dict(stats)
-        for role_idx, role_module in enumerate(self.hpec_role_modules):
-            role_stats = role_module.finalize_epoch_prototype_update()
-            for key, value in role_stats.items():
-                combined_stats[f"role_{role_idx}_{key}"] = value
-        if combined_stats:
-            self.latest_aux_losses.update(combined_stats)
-        return combined_stats
 
     def get_aux_loss(self):
         aux_loss = self.latest_aux_losses.get("causal_aux_loss")
@@ -3457,9 +3373,6 @@ class Model(nn.Module):
             radius_weighted_loss = radius_loss
             prototype_radius_floor_loss = hpec_energy_loss * 0.0
             prototype_radius_floor_weighted_loss = prototype_radius_floor_loss
-            hbr_weighted_loss = self.latest_aux_losses.get("lp_hbr_weighted_loss")
-            if hbr_weighted_loss is None:
-                hbr_weighted_loss = hpec_energy_loss * 0.0
             if self.hpec_z_radius_loss_weight > 0 and self.latest_module3_output is not None:
                 z_radius = torch.linalg.norm(self.latest_module3_output.z_global, dim=-1)
                 if self.hpec_z_min_radius > 0:
@@ -3498,7 +3411,6 @@ class Model(nn.Module):
                 + radius_weighted_loss
                 + prototype_radius_floor_weighted_loss
                 + prototype_separation_weighted_loss
-                + hbr_weighted_loss
             )
             prior_alignment_weighted_loss = self._class_prior_alignment_loss(
                 self.latest_prediction_logits,
@@ -3522,7 +3434,6 @@ class Model(nn.Module):
                     "hpec_z_radius_weighted_loss": radius_weighted_loss,
                     "hpec_prototype_radius_floor_loss": prototype_radius_floor_loss,
                     "hpec_prototype_radius_floor_weighted_loss": prototype_radius_floor_weighted_loss,
-                    "lp_hbr_weighted_loss": hbr_weighted_loss,
                 }
             )
         else:
@@ -3808,62 +3719,32 @@ class Model(nn.Module):
 
         if self.latest_module3_output is not None:
             module3_output = self.latest_module3_output
-            if hasattr(module3_output, "graph_lorentz"):
-                items.extend(
-                    [
-                        module3_output.c_clipped,
-                        module3_output.h0,
-                        module3_output.h_gcn,
-                        module3_output.graph_lorentz,
-                        module3_output.poincare_bridge,
-                        module3_output.poincare_mac,
-                        module3_output.z_tangent,
-                        module3_output.node_attention,
-                        module3_output.normalized_adjacency,
-                        module3_output.mac_radius.reshape(-1, 1),
-                    ]
-                )
-                titles.extend(
-                    [
-                        "LP Module3 input features",
-                        "LP Module3 Lorentz lifting H0",
-                        "LP Module3 Directed Lorentz nodes",
-                        "LP Module3 Lorentz graph embedding",
-                        "LP Module4 Lorentz-to-Poincare bridge",
-                        "LP Module4 MAC-stable Poincare z",
-                        "LP Module4 logmap0(MAC z)",
-                        "LP Module3 node attention weights",
-                        "LP Module3 normalized directed A",
-                        "LP Module4 MAC radius per sample",
-                    ]
-                )
-            else:
-                items.extend(
-                    [
-                        module3_output.c_clipped,
-                        module3_output.h0,
-                        module3_output.h_gcn,
-                        module3_output.z_global,
-                        module3_output.z_tangent,
-                        module3_output.node_attention,
-                        module3_output.network_summary,
-                        module3_output.network_attention.reshape(1, -1),
-                        module3_output.normalized_adjacency,
-                    ]
-                )
-                titles.extend(
-                    [
-                        "Module3 C_clipped",
-                        "Module3 H0 Poincare",
-                        "Module3 H_gcn",
-                        "Module3 z_global",
-                        "Module3 logmap0(z_global)",
-                        "Module3 node attention weights",
-                        "Module3 MDD-prior network summary",
-                        "Module3 MDD-prior network attention",
-                        "Module3 normalized A",
-                    ]
-                )
+            items.extend(
+                [
+                    module3_output.c_clipped,
+                    module3_output.h0,
+                    module3_output.h_gcn,
+                    module3_output.z_global,
+                    module3_output.z_tangent,
+                    module3_output.node_attention,
+                    module3_output.network_summary,
+                    module3_output.network_attention.reshape(1, -1),
+                    module3_output.normalized_adjacency,
+                ]
+            )
+            titles.extend(
+                [
+                    "Module3 C_clipped",
+                    "Module3 H0 Poincare",
+                    "Module3 H_gcn",
+                    "Module3 z_global",
+                    "Module3 logmap0(z_global)",
+                    "Module3 node attention weights",
+                    "Module3 MDD-prior network summary",
+                    "Module3 MDD-prior network attention",
+                    "Module3 normalized A",
+                ]
+            )
 
         if self.latest_gcn_fallback_output is not None:
             gcn_output = self.latest_gcn_fallback_output

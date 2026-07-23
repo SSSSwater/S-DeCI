@@ -1,4 +1,4 @@
-﻿## Purpose
+## Purpose
 
 定义 `S-DeCI` 模型的正式行为：它是基于现有 DeCI block 的独立模型文件，可在模块 1 输出后接入模块 2 时序因果图学习，并进一步接入模块 3/4 双曲路径。当前默认主路线为 `hgcn_hpec`：模块 1 提取 ALFF/fALFF 低频生理节点特征，模块 2 使用 Temporal NTS-NOTEARS 从历史 BOLD 预测未来 BOLD 并学习 $A_{\mathrm{lag}}$，模块 3 使用 Poincare HGCN 生成 $z_{\mathrm{global}}$，模块 4 使用 HPEC 多原型 energy 形成双曲原型证据。`lp_brain_hpec`、attention-guided temporal learner、旧静态 DAG 等路径只作为对照或 legacy/debug，不作为默认主路线。
 ## Requirements
@@ -189,20 +189,21 @@ $$
 
 ### Requirement: S-DeCI 默认模块 3/4 路径
 
-`S-DeCI` 的默认主路线 SHALL 使用现有 `hgcn_hpec` 路径。`lp_brain_hpec` 只属于实验对照或 legacy/debug 路径；若后续文档重新把它写成可执行方案，MUST 按“输入、计算公式、输出、来源或原理、设计原因”完整展开，且不得和默认 `hgcn_hpec` 主路线混写。
+`S-DeCI` 的默认主路线 SHALL 使用现有 Poincare HGCN-HPEC 路径。`lp_brain_hpec` 已在完整五折负向实验后退出当前可执行能力；若未来通过新 change 重新引入，MUST 按“输入、计算公式、输出、来源或原理、设计原因”完整展开，且不得和默认主路线混写。
 
 #### Scenario: 默认使用 HGCN-HPEC 路径
 
 - **GIVEN** `use_hyperbolic_modules34 == 1`
 - **WHEN** `S-DeCI` 初始化
-- **THEN** 默认配置 MUST 使用 `module34_arch == "hgcn_hpec"` 或等价 HGCN-HPEC 路径
+- **THEN** 默认配置 MUST 直接初始化 HGCN-HPEC 路径，不要求 `module34_arch` 选择器
 - **AND** 模型 MUST 使用 Poincare HGCN readout 与 HPEC 多原型 energy evidence 作为默认模块 3/4 路径
 
-#### Scenario: LP-Brain-HPEC 只能作为对照
+#### Scenario: LP-Brain-HPEC 只保留历史证据
 
-- **WHEN** 文档或训练入口提到 `lp_brain_hpec`
-- **THEN** MUST 明确标注它不是默认主路线
-- **AND** MUST 说明当前完整测试中它速度更慢、稳定性更弱，因此不得作为默认模型图或默认方法公式展开的中心路径
+- **WHEN** 文档提到 `lp_brain_hpec`
+- **THEN** MUST 明确标注它是已退出代码的负向实验
+- **AND** MUST 说明其 MDD/AAL116 五折 Accuracy 为 62.63%、Macro-F1 为 59.43%、AUC 为 62.50%，且训练更慢
+- **AND** 正式训练入口 MUST NOT 把它暴露为可选架构
 
 ### Requirement: S-DeCI 暴露模块 2 时序因果辅助损失
 
@@ -413,7 +414,7 @@ $$
 
 ### Requirement: S-DeCI 使用 HPEC 证据融合预测与指标
 
-`S-DeCI` SHALL 在启用默认 `hgcn_hpec` 模块 4 时，将 HPEC energy/prototype evidence 转换为校准后的双曲证据增量，并与欧氏局部结构证据 logits 融合后计算预测类别和指标。纯 energy-based prediction 只属于显式 energy-only 实验路径或 LP-Brain-HPEC 对照路径。
+`S-DeCI` SHALL 在启用默认 HGCN-HPEC 模块 4 时，将 HPEC energy/prototype evidence 转换为校准后的双曲证据增量，并与欧氏局部结构证据 logits 融合后计算预测类别和指标。纯 energy-based prediction 只作为历史实验口径保留。
 
 #### Scenario: 默认融合预测
 
@@ -635,15 +636,21 @@ $$
 - **AND** 总 loss MUST 包含模块 2 时序预测、$A_0$ DAG、$A_{\mathrm{lag}}/A_0$ 稀疏和 lag 平滑 auxiliary loss
 - **AND** 总 loss MUST NOT 包含 HPEC 或 prototype loss
 
-### Requirement: S-DeCI 协调互补视图与独立原型更新
+### Requirement: S-DeCI 协调标准视图与独立原型更新
 
-`S-DeCI` SHALL 在保持 `forward()` 返回标准最终 logits 的前提下，缓存训练期互补视图，并向训练循环提供优化器更新后的可靠 prototype 更新接口。
+`S-DeCI` SHALL 在保持 `forward()` 返回标准最终 logits 的前提下，向训练循环提供优化器更新后的可靠 prototype 更新接口。已完成负向实验的互补遮挡分支不得进入当前正式 forward 或总 loss。
 
 #### Scenario: 新增机制只在兼容模块组合中运行
 - **GIVEN** 模块 3/4 未同时启用
-- **WHEN** 用户启用互补视图、可靠 TP prototype 或多阶因果编码
+- **WHEN** 用户启用可靠 TP prototype 或多阶因果编码
 - **THEN** 系统 MUST 拒绝该不兼容组合或明确跳过
 - **AND** MUST 不影响 GCN fallback 路径
+
+#### Scenario: 互补学习不进入当前训练
+- **WHEN** 系统计算标准 forward 与总 loss
+- **THEN** MUST NOT 执行遮挡互补模块 3/4 前向
+- **AND** MUST NOT 加入 Poincare 双视图一致性、InfoNCE 或 masked CE
+- **AND** 历史负向结果 MUST 保留在模型修改证据台账
 
 #### Scenario: GCN fallback 且模块 2 禁用时只使用分类 loss
 - **GIVEN** `use_causal_module2 == 0`

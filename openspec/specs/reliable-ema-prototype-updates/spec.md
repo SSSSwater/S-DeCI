@@ -6,13 +6,13 @@
 
 ### Requirement: 可靠 TP 独立 prototype 更新
 
-系统 SHALL 支持 `hpec_prototype_update_mode=reliable_tp_ema`，只使用预测正确、高置信度且可选双视图一致的训练样本在无梯度上下文移动 prototype。
+系统 SHALL 支持 `hpec_prototype_update_mode=reliable_tp_ema`，只使用标准视图中预测正确且高置信度的训练样本在无梯度上下文移动 prototype。
 
 #### Scenario: 优化器更新后移动 prototype
 - **GIVEN** 当前为训练 batch 且已完成 `optimizer.step()`
 - **WHEN** 训练循环调用可靠 prototype 更新接口
 - **THEN** 系统 MUST 仅接受预测正确且真实类概率达到 `hpec_reliable_confidence_threshold` 的样本
-- **AND** 互补视图启用时 MUST 应用 `hpec_reliable_view_consistency_threshold`
+- **AND** MUST 不依赖已退役的互补视图或视图一致性阈值
 - **AND** MUST 按真实类内最低 HPEC energy prototype 分配样本
 - **AND** MUST 用 EMA、初始化 anchor 和 Poincare 半径壳约束更新 prototype
 - **AND** MUST NOT 将该移动加入总 loss 或执行第二次 backward

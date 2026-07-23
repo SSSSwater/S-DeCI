@@ -1,4 +1,4 @@
-﻿## Purpose
+## Purpose
 
 定义根目录训练测试脚本的行为：这些脚本用于快速验证本地数据集、模型构建、交叉验证训练、指标汇报、S-DeCI 模块 2/3 参数入口和显式可视化能力。
 ## Requirements
@@ -186,7 +186,7 @@ $$
 
 ### Requirement: 训练指标支持 HPEC 融合预测
 
-训练和验证 SHALL 在默认 `hgcn_hpec` 模块 4 启用时使用最终融合 logits $\hat{Y}$ 汇报指标。energy-based prediction 只属于显式 energy-only 或 `lp_brain_hpec` 实验路径。
+训练和验证 SHALL 在默认 HGCN-HPEC 模块 4 启用时使用最终融合 logits $\hat{Y}$ 汇报指标。energy-based prediction 只作为历史实验口径保留。
 
 #### Scenario: 汇报默认 HPEC 融合指标
 
@@ -381,27 +381,16 @@ $$
 - **AND** 可视化输出 MUST 包含当前 adjacency 来源
 - **AND** 若使用 GCN fallback，输出 MUST 包含 GCN hidden 或 readout 表征
 
-### Requirement: 训练日志支持 LP-Brain-HPEC 诊断
+### Requirement: 训练日志保留 LP-Brain-HPEC 历史诊断结论
 
-训练流程 SHALL 在 LP-Brain-HPEC 路径启用时记录几何稳定性、入出边聚合和 HPEC energy 诊断。
+LP-Brain-HPEC 已退出当前训练路径。历史实验文档 SHALL 保留几何稳定性、入出边聚合和 HPEC energy 诊断结论，当前 TensorBoard 不应继续注册无执行路径的专用标量。
 
-#### Scenario: 控制台打印 LP 诊断
+#### Scenario: 查阅历史 LP 诊断
 
-- **GIVEN** `module34_arch == "lp_brain_hpec"`
-- **AND** `print_metric_every > 0`
-- **WHEN** 训练流程打印 epoch 指标
-- **THEN** 日志 MUST 包含 Poincare 半径或 MAC 后半径
-- **AND** MUST 包含 MAC clip 比例
-- **AND** MUST 包含 HBR loss
-- **AND** SHOULD 包含入边聚合强度和出边聚合强度
-
-#### Scenario: TensorBoard 记录 LP 诊断
-
-- **GIVEN** `use_tensorboard == 1`
-- **AND** `module34_arch == "lp_brain_hpec"`
-- **WHEN** 训练流程写入 epoch 标量
-- **THEN** TensorBoard MUST 记录 MAC 半径、HBR loss、Lorentz constraint error 或等价几何诊断
-- **AND** MUST 继续记录现有 Loss、Metrics、Module2 和 Final 指标
+- **WHEN** 开发者检查 LP-Brain-HPEC 负向实验
+- **THEN** 证据文档 MUST 说明 Lorentz constraint、bridge/MAC 半径和 HBR 诊断结论
+- **AND** 当前 TensorBoard SHOULD NOT 注册只可能恒为零或缺失的 LP 专用 tag
+- **AND** 当前训练 MUST 继续记录现有 Loss、Metrics、Module2、Module34 和 Final 指标
 
 ### Requirement: 训练入口支持 HPEC combined energy 与 prototype warm-start
 
@@ -436,23 +425,23 @@ $$
 - **AND** 参数列表 MUST 包含 `hpec_data_init`
 - **AND** 参数 help SHOULD 使用中文说明其作用
 
-### Requirement: 训练入口暴露 LP-Brain-HPEC 参数
+### Requirement: 训练入口不暴露已退役 LP-Brain-HPEC 参数
 
-训练入口 SHALL 暴露 `module34_arch=lp_brain_hpec` 以及 LP-Brain-HPEC 所需的 Lorentz、bridge、MAC/HBR 参数。
+正式训练入口 SHALL 只暴露当前 HGCN-HPEC 路径参数，不再暴露 `module34_arch=lp_brain_hpec` 以及只服务于该路径的 Lorentz、bridge、MAC/HBR 参数。
 
-#### Scenario: run_cv 暴露 LP-Brain-HPEC 参数
+#### Scenario: run_cv 不提供 LP 架构选择
 
 - **WHEN** 用户运行 `python run_cv.py --help`
-- **THEN** 参数列表 MUST 包含 `module34_arch`
-- **AND** MUST 包含 `lorentz_layers`、`lorentz_curvature`、`lorentz_alpha_out_init`、`module34_geo_dtype`
-- **AND** MUST 包含 `mac_min_radius`、`mac_max_radius`、`hbr_safe_radius` 和 `hbr_loss_weight`
+- **THEN** 参数列表 MUST NOT 包含 `module34_arch=lp_brain_hpec` 选择
+- **AND** SHOULD 移除 `lorentz_layers`、`lorentz_curvature`、`lorentz_alpha_out_init`、`module34_geo_dtype`
+- **AND** SHOULD 移除 `mac_min_radius`、`mac_max_radius`、`hbr_safe_radius` 和 `hbr_loss_weight`
 - **AND** help 文本 MUST 使用中文说明，必要英文关键词 MAY 保留
 
-#### Scenario: best config 脚本传递 LP 参数
+#### Scenario: best config 脚本不传递 LP 参数
 
 - **WHEN** 用户运行根目录 best-config 脚本
-- **THEN** 脚本 MUST 能接收 LP-Brain-HPEC 相关 CLI 参数
-- **AND** 脚本 MUST 将这些参数写入构造出的 experiment args
+- **THEN** 脚本 MUST NOT 要求 LP-Brain-HPEC 相关 CLI 参数
+- **AND** 历史 LP 指标 MUST 通过结果文件和证据台账查阅
 
 #### Scenario: MDD 最佳配置传递 HPEC 参数
 
@@ -509,11 +498,12 @@ $$
 - **AND** 总 loss MUST NOT 包含 site adversarial loss
 - **AND** MDD 默认测试配置 SHOULD 保持 `time_series_harmonization == "site_zscore"` 且 `use_site_adversarial == 0`
 
-### Requirement: 训练入口支持互补原型消融
+### Requirement: 训练入口支持可靠原型与多阶因果消融
 
-训练入口 SHALL 提供可靠 TP EMA、因果显著性互补视图与多阶因果编码的中文参数，并记录其训练诊断和完整实验结果。
+训练入口 SHALL 提供可靠 TP EMA 与多阶因果编码的中文参数，并记录其训练诊断和完整实验结果；互补遮挡及相关 loss 已退出正式接口。
 
 #### Scenario: TensorBoard 与完整结果记录
 - **WHEN** 用户启用任一新增机制训练
-- **THEN** TensorBoard MUST 写入 `Complementary/*`、`PrototypeUpdate/*` 或 `CausalReachability/*` 标量
+- **THEN** TensorBoard MUST 写入 `PrototypeUpdate/*` 或 `CausalReachability/*` 标量
+- **AND** SHOULD NOT 注册无执行路径的 `Complementary/*` 标量
 - **AND** 完整 5-fold/50+ epoch 训练 MUST 将 Accuracy、Precision、Recall、Macro-F1、AUC、训练时长和模块设计参数写入 `result.xlsx`

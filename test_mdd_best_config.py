@@ -174,24 +174,6 @@ def parse_args():
     g.add_argument("--hyperbolic-residual-margin-max-scale", type=float, default=2.0, help="双曲evidence按margin放大的最大倍率")
     g.add_argument("--use-hyperbolic-residual-bias", type=int, default=1, help="是否给模块3/4双曲evidence添加可学习类别偏置，用于训练内校准正负类证据")
     g.add_argument("--keep-gcn-fallback-with-hyperbolic", type=int, default=1, help="开模块3/4时仍构建欧氏局部结构分支，用于与双曲原型evidence做logit级融合")
-    g.add_argument("--lorentz-layers", type=int, default=1, help="[LP] 有向Lorentz图卷积层数")
-    g.add_argument("--lorentz-curvature", type=float, default=1.0, help="[LP] Lorentz/Poincaré 曲率")
-    g.add_argument("--lorentz-dropout", type=float, default=0.3, help="[LP] 图卷积 dropout")
-    g.add_argument("--lorentz-alpha-out-init", type=float, default=0.5, help="[LP] 出边聚合分支初始权重")
-    g.add_argument("--lorentz-message-residual-weight", type=float, default=0.0, help="[LP] 原始邻域消息残差权重；完整测试为负效果，默认关闭")
-    g.add_argument("--lorentz-message-gate-init", type=float, default=0.5, help="[LP] 因果图消息直通门初值；调大可避免双曲图消息在早期被压没")
-    g.add_argument("--lorentz-centroid-message-weight", type=float, default=0.0, help="[LP] 使用Lorentz centroid几何消息替代部分切空间value消息的比例")
-    g.add_argument("--lorentz-max-tangent-norm", type=float, default=1.0, help="[LP] Lorentz/Poincaré桥接前切空间最大范数")
-    g.add_argument("--lp-use-network-readout", type=int, default=1, help="[LP] 是否按AAL功能网络先汇总再生成全局双曲点")
-    g.add_argument("--lp-network-readout-blend", type=float, default=0.75, help="[LP] 网络级readout相对全脑readout的融合权重")
-    g.add_argument("--lp-stats-update-gate-init", type=float, default=0.0, help="[LP] 统计读出增强门控初值；0 为中性小步残差，避免默认全量统计残差推满半径")
-    g.add_argument("--lp-use-dynamic-radius", type=int, default=1, help="[LP] 是否使用样本自适应双曲半径；默认开启，避免所有样本被压到同一双曲半径")
-    g.add_argument("--lp-dynamic-radius-min-ratio", type=float, default=0.15, help="[LP] 动态半径下限占 max_tangent_norm 的比例")
-    g.add_argument("--lp-dynamic-radius-max-ratio", type=float, default=0.95, help="[LP] 动态半径上限占 max_tangent_norm 的比例")
-    g.add_argument("--lp-dynamic-radius-source", default="norm", choices=("norm", "graph_context"), help="[LP] 动态半径来源：norm 原范数策略 / graph_context 图结构上下文策略")
-    g.add_argument("--lp-input-residual-weight", type=float, default=0.0, help="[LP] readout 前保留 Lorentz lifting 初始节点表示的权重")
-    g.add_argument("--lp-poincare-readout-weight", type=float, default=0.0, help="[LP] 庞加莱Einstein midpoint readout校正权重；短测未带来收益，默认关闭")
-    g.add_argument("--lp-mac-clip-mode", default="soft", choices=("hard", "soft"), help="[LP] MAC半径处理：hard强制安全环带，soft仅限制越界并保留小半径差异")
     g.add_argument("--module34-supcon-loss-weight", type=float, default=0.0, help="模块3/4切空间监督对比损失权重")
     g.add_argument("--module34-supcon-temperature", type=float, default=0.2, help="模块3/4切空间监督对比温度")
     g.add_argument("--module34-center-loss-weight", type=float, default=0.0, help="模块3 z_tangent 类中心分离损失权重；0表示关闭")
@@ -229,12 +211,9 @@ def parse_args():
     g.add_argument("--hpec-prototype-lr-scale", type=float, default=1.0, help="HPEC原型/边界偏置的学习率缩放；<1表示慢速原型更新，默认1保持当前最佳完整实验行为")
     g.add_argument("--hpec-prototype-parameterization", default="poincare_point", choices=("poincare_point", "tangent_direction"), help="HPEC原型参数化：poincare_point为现有Poincare点；tangent_direction为固定半径、只学习Busemann理想方向")
     g.add_argument("--hpec-use-sinkhorn-ema", type=int, default=1, help="是否用Sinkhorn均衡分配+EMA慢更新多原型")
-    g.add_argument("--hpec-prototype-update-mode", default="reliable_tp_ema", choices=("reliable_tp_ema", "epoch_reliable_frechet_ema", "sinkhorn_ema", "none"), help="原型更新模式：epoch_reliable_frechet_ema按完整epoch执行独立流形EMA")
+    g.add_argument("--hpec-prototype-update-mode", default="reliable_tp_ema", choices=("reliable_tp_ema", "sinkhorn_ema", "none"), help="原型更新模式：可靠TP EMA、Sinkhorn legacy对照或冻结")
     g.add_argument("--hpec-reliable-confidence-threshold", type=float, default=0.70, help="可靠TP原型更新的真实类最小预测概率")
-    g.add_argument("--hpec-reliable-view-consistency-threshold", type=float, default=0.55, help="启用互补视图时可靠TP要求的最小切空间余弦一致性")
     g.add_argument("--hpec-reliable-min-samples", type=int, default=2, help="一个类内原型执行可靠EMA所需的最少TP样本数")
-    g.add_argument("--hpec-reliable-weight-floor", type=float, default=0.05, help="epoch流形EMA中低置信样本的最小连续权重")
-    g.add_argument("--hpec-epoch-frechet-steps", type=int, default=3, help="epoch原型目标中心的Karcher迭代次数")
     g.add_argument("--hpec-ema-start-epoch", type=int, default=20, help="可靠TP原型EMA从第几个epoch开始；先让模块3/4形成初始表征")
     g.add_argument("--hpec-ema-update-epochs", type=int, default=-1, help="可靠TP原型EMA持续多少epoch；负数表示warm-up后全程更新")
     g.add_argument("--hpec-ema-alpha", type=float, default=0.995, help="HPEC原型EMA历史保留系数，越大更新越慢")
@@ -487,24 +466,6 @@ def build_args(cli_args):
         hgcn_radial_max=cli_args.hgcn_radial_max,
         hgcn_add_self_loop=1,
         hgcn_adjacency_normalization="row",
-        lorentz_layers=cli_args.lorentz_layers,
-        lorentz_curvature=cli_args.lorentz_curvature,
-        lorentz_dropout=cli_args.lorentz_dropout,
-        lorentz_alpha_out_init=cli_args.lorentz_alpha_out_init,
-        lorentz_message_residual_weight=cli_args.lorentz_message_residual_weight,
-        lorentz_message_gate_init=cli_args.lorentz_message_gate_init,
-        lorentz_centroid_message_weight=cli_args.lorentz_centroid_message_weight,
-        lorentz_max_tangent_norm=cli_args.lorentz_max_tangent_norm,
-        lp_use_network_readout=cli_args.lp_use_network_readout,
-        lp_network_readout_blend=cli_args.lp_network_readout_blend,
-        lp_stats_update_gate_init=cli_args.lp_stats_update_gate_init,
-        lp_use_dynamic_radius=cli_args.lp_use_dynamic_radius,
-        lp_dynamic_radius_min_ratio=cli_args.lp_dynamic_radius_min_ratio,
-        lp_dynamic_radius_max_ratio=cli_args.lp_dynamic_radius_max_ratio,
-        lp_dynamic_radius_source=cli_args.lp_dynamic_radius_source,
-        lp_input_residual_weight=cli_args.lp_input_residual_weight,
-        lp_poincare_readout_weight=cli_args.lp_poincare_readout_weight,
-        lp_mac_clip_mode=cli_args.lp_mac_clip_mode,
         module34_supcon_loss_weight=cli_args.module34_supcon_loss_weight,
         module34_supcon_temperature=cli_args.module34_supcon_temperature,
         module34_center_loss_weight=cli_args.module34_center_loss_weight,
@@ -621,10 +582,7 @@ def build_args(cli_args):
         hpec_use_sinkhorn_ema=cli_args.hpec_use_sinkhorn_ema,
         hpec_prototype_update_mode=prototype_update_mode,
         hpec_reliable_confidence_threshold=cli_args.hpec_reliable_confidence_threshold,
-        hpec_reliable_view_consistency_threshold=cli_args.hpec_reliable_view_consistency_threshold,
         hpec_reliable_min_samples=cli_args.hpec_reliable_min_samples,
-        hpec_reliable_weight_floor=cli_args.hpec_reliable_weight_floor,
-        hpec_epoch_frechet_steps=cli_args.hpec_epoch_frechet_steps,
         hpec_sinkhorn_epsilon=0.05,
         hpec_sinkhorn_iters=3,
         hpec_ema_alpha=cli_args.hpec_ema_alpha,
@@ -638,10 +596,6 @@ def build_args(cli_args):
         hpec_prototype_lr_scale=cli_args.hpec_prototype_lr_scale,
         hpec_init_steps=500,
         hpec_eps=1e-7,
-        mac_min_radius=0.05,
-        mac_max_radius=0.98,
-        hbr_safe_radius=2.0,
-        hbr_loss_weight=0.0,
         visualize_causal=cli_args.visualize_causal,
         causal_vis_dir=str(root / cli_args.causal_vis_dir),
         visualize_every=0,
@@ -1115,20 +1069,6 @@ def _result_headers():
         "hgcn_network_gate_strength",
         "hgcn_use_graph_degree_encoding",
         "hgcn_graph_degree_encoding_weight",
-        "lorentz_layers",
-        "lorentz_alpha_out",
-        "lorentz_msg_res",
-        "lorentz_centroid_msg",
-        "lorentz_max_tangent_norm",
-        "lp_network_readout",
-        "lp_network_readout_blend",
-        "lp_stats_gate_init",
-        "lp_dynamic_radius",
-        "lp_radius_min_ratio",
-        "lp_radius_max_ratio",
-        "lp_radius_source",
-        "lp_input_residual",
-        "lp_mac_clip_mode",
         "module34_supcon_weight",
         "module34_supcon_temp",
         "module34_center_weight",
@@ -1174,10 +1114,7 @@ def _result_headers():
         "hpec_data_init",
         "hpec_prototype_update_mode",
         "hpec_reliable_confidence_threshold",
-        "hpec_reliable_view_consistency_threshold",
         "hpec_reliable_min_samples",
-        "hpec_reliable_weight_floor",
-        "hpec_epoch_frechet_steps",
         "hpec_ema_start_epoch",
         "hpec_trainable_prototypes",
         "hpec_prototype_lr_scale",
@@ -1345,20 +1282,6 @@ def save_result_row(cli_args, metrics, setting):
         cli_args.hgcn_network_gate_strength,
         cli_args.hgcn_use_graph_degree_encoding,
         cli_args.hgcn_graph_degree_encoding_weight,
-        cli_args.lorentz_layers,
-        cli_args.lorentz_alpha_out_init,
-        cli_args.lorentz_message_residual_weight,
-        cli_args.lorentz_centroid_message_weight,
-        cli_args.lorentz_max_tangent_norm,
-        cli_args.lp_use_network_readout,
-        cli_args.lp_network_readout_blend,
-        cli_args.lp_stats_update_gate_init,
-        cli_args.lp_use_dynamic_radius,
-        cli_args.lp_dynamic_radius_min_ratio,
-        cli_args.lp_dynamic_radius_max_ratio,
-        cli_args.lp_dynamic_radius_source,
-        cli_args.lp_input_residual_weight,
-        cli_args.lp_mac_clip_mode,
         cli_args.module34_supcon_loss_weight,
         cli_args.module34_supcon_temperature,
         cli_args.module34_center_loss_weight,
@@ -1404,10 +1327,7 @@ def save_result_row(cli_args, metrics, setting):
         cli_args.hpec_data_init,
         cli_args.hpec_prototype_update_mode,
         cli_args.hpec_reliable_confidence_threshold,
-        cli_args.hpec_reliable_view_consistency_threshold,
         cli_args.hpec_reliable_min_samples,
-        cli_args.hpec_reliable_weight_floor,
-        cli_args.hpec_epoch_frechet_steps,
         cli_args.hpec_ema_start_epoch,
         cli_args.hpec_trainable_prototypes,
         cli_args.hpec_prototype_lr_scale,

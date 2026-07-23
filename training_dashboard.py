@@ -87,7 +87,7 @@ PARAMETER_GROUPS = [
         {"key": "use_hyperbolic_modules34", "label": "启用模块 3/4", "kind": "checkbox", "default": 1},
         {"key": "use_hgcn_module3", "label": "启用 HGCN", "kind": "checkbox", "default": 1},
         {"key": "use_hpec_module4", "label": "启用 HPEC", "kind": "checkbox", "default": 1},
-        {"key": "module34_arch", "label": "模块 3/4 架构", "kind": "select", "default": "hgcn_hpec", "options": ["hgcn_hpec", "lp_brain_hpec"]},
+        {"key": "module34_arch", "label": "模块 3/4 架构", "kind": "select", "default": "hgcn_hpec", "options": ["hgcn_hpec"]},
         {"key": "hgcn_hidden_dim", "label": "HGCN 隐藏维度", "kind": "number", "default": 64},
         {"key": "hgcn_layers", "label": "HGCN 层数", "kind": "number", "default": 1},
         {"key": "hgcn_dropout", "label": "HGCN Dropout", "kind": "number", "step": "0.01", "default": 0.6},

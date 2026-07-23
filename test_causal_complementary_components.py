@@ -35,7 +35,6 @@ class ReliablePrototypeUpdateTests(unittest.TestCase):
             points,
             self.labels,
             self.logits,
-            companion_z_global=points,
             energy_per_proto=output.energy_per_proto,
         )
         after = layer._current_prototypes().detach()
@@ -62,34 +61,6 @@ class ReliablePrototypeUpdateTests(unittest.TestCase):
             self.assertTrue(torch.isfinite(after).all())
             if mode == "none":
                 self.assertTrue(torch.equal(before, after))
-
-    def test_epoch_frechet_ema_updates_after_finalize(self):
-        layer = HPECPrototypeEnergy(
-            2,
-            8,
-            prototypes_per_class=2,
-            prototype_update_mode="epoch_reliable_frechet_ema",
-            reliable_min_samples=1,
-            ema_alpha=0.9,
-            trainable_prototypes=True,
-        )
-        points = self._points(layer)
-        before = layer._current_prototypes().detach().clone()
-        queue_stats = layer.queue_epoch_prototype_samples(
-            points,
-            self.labels,
-            self.logits,
-            companion_z_global=points,
-        )
-        self.assertIn("hpec_epoch_queue_size", queue_stats)
-        self.assertTrue(torch.equal(before, layer._current_prototypes().detach()))
-
-        stats = layer.finalize_epoch_prototype_update()
-        after = layer._current_prototypes().detach()
-        self.assertFalse(layer.prototypes.requires_grad)
-        self.assertGreater(float(layer.manifold.dist(before, after, dim=-1).mean()), 0.0)
-        self.assertGreater(float(stats["hpec_epoch_occupancy_entropy"]), 0.0)
-
 
 class CausalRoleReadoutTests(unittest.TestCase):
     def test_four_role_centers_stay_inside_poincare_ball(self):

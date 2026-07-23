@@ -767,3 +767,16 @@ $$
 \leftarrow
 0.
 $$
+
+## 最终实验决策（2026-07-23）
+
+上述内容记录 LP-Brain-HPEC 的历史候选设计，不再代表当前正式实现。MDD/AAL116 完整 5-fold、50 epoch 的 final-epoch 结果为 Accuracy 62.63%、Macro-F1 59.43%、AUC 62.50%，低于 Poincare HGCN-HPEC 主线且训练耗时更高。几何诊断还显示 Lorentz 消息范数衰减、bridge 后半径压缩以及 MAC 对自然分布的强制干预。
+
+因此最终采用以下决策：
+
+1. 当前正式模块 3 只保留 Poincare HGCN 与原点切空间 `mean_std` readout。
+2. 当前正式模块 4 直接接收 Poincare `z_global`，不经过 Lorentz-to-Poincare bridge、MAC 或 HBR。
+3. FC 只能用于分类图构造或独立欧氏证据，不允许直接加到双曲切向量中。
+4. 最终分类采用欧氏局部结构证据与 HPEC 双曲原型证据的 dual-view evidence fusion。
+5. `lp_brain_hpec`、专用 layer、架构开关和专用训练参数退出当前正式代码；历史公式只用于解释负向实验。
+6. 未来若重启 Lorentz 路线，必须新建 change，并采用流形原生距离注意力、动态基点或 Lorentz centroid readout，且重新通过完整五折比较。
