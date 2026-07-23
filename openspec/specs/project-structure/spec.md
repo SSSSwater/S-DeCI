@@ -31,6 +31,22 @@
 - **WHEN** 开发者查看仓库根目录
 - **THEN** 根目录 MUST 包含以下主要内容：`README.md`、`requirements.txt`、`run_cv.py`、`hrun.py`、`extract_re.py`、`data_provider/`、`exp/`、`models/`、`layers/`、`scripts/`、`utils/`、`openspec/` 和 `docs/`
 
+### Requirement: 环境可复现性
+
+项目 SHALL 提供可复现的 Python 环境配置说明，并避免在通用依赖文件中固定某个只适用于单一 CUDA 版本的 PyTorch wheel。
+
+#### Scenario: 配置不同 CUDA 设备
+
+- **WHEN** 开发者在新设备上配置项目环境
+- **THEN** README MUST 指向中文环境配置文档
+- **AND** 环境文档 MUST 说明 Python 版本、虚拟环境创建、PyTorch CUDA/CPU 安装分支、项目依赖安装和基础验证步骤
+- **AND** `requirements.txt` MUST 使用兼容版本范围描述 PyTorch 依赖，而不是强制固定到某个 CUDA 构建
+
+#### Scenario: 验证本地环境
+
+- **WHEN** 开发者完成依赖安装
+- **THEN** 环境文档 SHOULD 提供 `pip check`、PyTorch/CUDA 检查、核心依赖导入检查和冒烟训练命令
+
 ### Requirement: 实验入口
 
 系统 SHALL 使用 `run_cv.py` 作为配置和运行交叉验证实验的主入口。

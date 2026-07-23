@@ -1,7 +1,7 @@
 schema: spec-driven
 
 context: |
-  技术栈: Python、torch
+  技术栈: Python 3.10、PyTorch 2.x、CUDA/CPU 自适应安装、TensorBoard、scikit-learn、SciPy
   Domain: fMRI time-series classification and causal graph learning
 
 rules:

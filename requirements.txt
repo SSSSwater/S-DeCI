@@ -9,6 +9,9 @@ reformer-pytorch==1.4.4
 scikit-learn==1.5.2
 scipy==1.14.1
 seaborn==0.13.2
-torch==2.4.1
+# PyTorch 的 CUDA wheel 与本机显卡驱动/CUDA 运行环境强相关。
+# 推荐先按 docs/环境配置与运行说明.md 为本机 CUDA/CPU 单独安装 torch；
+# 这里仅给出项目已验证的主版本范围，避免把不同设备强制降级到某个 CUDA 构建。
+torch>=2.4,<3.0
 tensorboard==2.18.0
 tqdm==4.66.5
